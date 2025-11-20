@@ -84,6 +84,7 @@ tensor_Light_Chuck_Grip = tensor(df_Light_Chuck_Grip.values)
 tensor_Light_Hand_Open = tensor(df_Light_Hand_Open.values)
 print ("Light intensity Tensors Loaded")
 
+# create lists of tensors for each intensity
 tensors_Light_list = [tensor_Light_No_movement, tensor_Light_Wrist_Flexion, tensor_Light_Wrist_Extension,
                 tensor_Light_Wrist_Pronation, tensor_Light_Wrist_Supination, tensor_Light_Chuck_Grip,
                 tensor_Light_Hand_Open]   
@@ -117,3 +118,46 @@ print ("Hard intensity Tensors Loaded")
 tensors_Hard_list = [tensor_Hard_No_movement, tensor_Hard_Wrist_Flexion, tensor_Hard_Wrist_Extension,
                 tensor_Hard_Wrist_Pronation, tensor_Hard_Wrist_Supination, tensor_Hard_Chuck_Grip,
                 tensor_Hard_Hand_Open]   
+
+# create a dictionary of all tensors lists
+tensors_dict = {
+    "Light": tensors_Light_list,
+    "Medium": tensors_Medium_list,
+    "Hard": tensors_Hard_list
+}
+
+""" DICTIONARY DIREDCTORY:
+
+tensors_dict = {
+    
+    "Light": [
+    
+    [1] = tensor_Light_No_movement, 
+    [2] = tensor_Light_Wrist_Flexion,
+    [3] = tensor_Light_Wrist_Extension,
+    [4] = tensor_Light_Wrist_Pronation, 
+    [5] = tensor_Light_Wrist_Supination, 
+    [6] = tensor_Light_Chuck_Grip,
+    [7] = tensor_Light_Hand_Open],
+    
+    "Medium": [
+    
+    [1] = tensor_Medium_No_movement, 
+    [2] = tensor_Medium_Wrist_Flexion,
+    [3] = tensor_Medium_Wrist_Extension,
+    [4] = tensor_Medium_Wrist_Pronation, 
+    [5] = tensor_Medium_Wrist_Supination, 
+    [6] = tensor_Medium_Chuck_Grip,
+    [7] = tensor_Medium_Hand_Open],
+    
+     "Hard": [
+    
+    [1] = tensor_Hard_No_movement, 
+    [2] = tensor_Hard_Wrist_Flexion,
+    [3] = tensor_Hard_Wrist_Extension,
+    [4] = tensor_Hard_Wrist_Pronation, 
+    [5] = tensor_Hard_Wrist_Supination, 
+    [6] = tensor_Hard_Chuck_Grip,
+    [7] = tensor_Hard_Hand_Open],
+}
+"""
