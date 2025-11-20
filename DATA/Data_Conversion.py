@@ -126,7 +126,7 @@ tensors_dict = {
     "Hard": tensors_Hard_list
 }
 
-""" DICTIONARY DIREDCTORY:
+""" DICTIONARY DIRECTORY:
 
 tensors_dict = {
     
