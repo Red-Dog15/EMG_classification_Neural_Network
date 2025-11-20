@@ -7,5 +7,4 @@ import torch
 import torch.nn as nn
 from DATA.Data_Conversion import tensors_dict
 
-
-print (tensors_dict["Hard"][1])
+print(tensors_dict["Hard"][0])

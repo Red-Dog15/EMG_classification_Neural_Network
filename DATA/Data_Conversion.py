@@ -72,16 +72,16 @@ print ("High Intensity dataframes Loaded")
 
 # create Pytorch tensor datasets equivalents
 from torch import tensor
-
+import torch
 # create tensors for each intensity
 print ("Light IntensityTensors Loading...")
-tensor_Light_No_movement = tensor(df_Light_No_movement.values)
-tensor_Light_Wrist_Flexion = tensor(df_Light_Wrist_Flexion.values)
-tensor_Light_Wrist_Extension = tensor(df_Light_Wrist_Extension.values)
-tensor_Light_Wrist_Pronation = tensor(df_Light_Wrist_Pronation.values)
-tensor_Light_Wrist_Supination = tensor(df_Light_Wrist_Supination.values)
-tensor_Light_Chuck_Grip = tensor(df_Light_Chuck_Grip.values)
-tensor_Light_Hand_Open = tensor(df_Light_Hand_Open.values)
+tensor_Light_No_movement = tensor(df_Light_No_movement.values, dtype=torch.float32)
+tensor_Light_Wrist_Flexion = tensor(df_Light_Wrist_Flexion.values, dtype=torch.float32)
+tensor_Light_Wrist_Extension = tensor(df_Light_Wrist_Extension.values, dtype=torch.float32)
+tensor_Light_Wrist_Pronation = tensor(df_Light_Wrist_Pronation.values, dtype=torch.float32)
+tensor_Light_Wrist_Supination = tensor(df_Light_Wrist_Supination.values, dtype=torch.float32)
+tensor_Light_Chuck_Grip = tensor(df_Light_Chuck_Grip.values, dtype=torch.float32)
+tensor_Light_Hand_Open = tensor(df_Light_Hand_Open.values, dtype=torch.float32)
 print ("Light intensity Tensors Loaded")
 
 # create lists of tensors for each intensity
@@ -91,13 +91,13 @@ tensors_Light_list = [tensor_Light_No_movement, tensor_Light_Wrist_Flexion, tens
 
 
 print ("Medium IntensityTensors Loading...")
-tensor_Medium_No_movement = tensor(df_Medium_No_movement.values)
-tensor_Medium_Wrist_Flexion = tensor(df_Medium_Wrist_Flexion.values)
-tensor_Medium_Wrist_Extension = tensor(df_Medium_Wrist_Extension.values)
-tensor_Medium_Wrist_Pronation = tensor(df_Medium_Wrist_Pronation.values)
-tensor_Medium_Wrist_Supination = tensor(df_Medium_Wrist_Supination.values)
-tensor_Medium_Chuck_Grip = tensor(df_Medium_Chuck_Grip.values)
-tensor_Medium_Hand_Open = tensor(df_Medium_Hand_Open.values)
+tensor_Medium_No_movement = tensor(df_Medium_No_movement.values, dtype=torch.float32)
+tensor_Medium_Wrist_Flexion = tensor(df_Medium_Wrist_Flexion.values, dtype=torch.float32)
+tensor_Medium_Wrist_Extension = tensor(df_Medium_Wrist_Extension.values, dtype=torch.float32)
+tensor_Medium_Wrist_Pronation = tensor(df_Medium_Wrist_Pronation.values, dtype=torch.float32)
+tensor_Medium_Wrist_Supination = tensor(df_Medium_Wrist_Supination.values, dtype=torch.float32)
+tensor_Medium_Chuck_Grip = tensor(df_Medium_Chuck_Grip.values, dtype=torch.float32)
+tensor_Medium_Hand_Open = tensor(df_Medium_Hand_Open.values, dtype=torch.float32)
 print ("Medium intensity Tensors Loaded")
 
 tensors_Medium_list = [tensor_Medium_No_movement, tensor_Medium_Wrist_Flexion, tensor_Medium_Wrist_Extension,
@@ -105,13 +105,13 @@ tensors_Medium_list = [tensor_Medium_No_movement, tensor_Medium_Wrist_Flexion, t
                 tensor_Medium_Hand_Open]   
 
 print ("Hard Intensity Tensors Loading...")
-tensor_Hard_No_movement = tensor(df_Hard_No_movement.values)
-tensor_Hard_Wrist_Flexion = tensor(df_Hard_Wrist_Flexion.values)
-tensor_Hard_Wrist_Extension = tensor(df_Hard_Wrist_Extension.values)
-tensor_Hard_Wrist_Pronation = tensor(df_Hard_Wrist_Pronation.values)
-tensor_Hard_Wrist_Supination = tensor(df_Hard_Wrist_Supination.values)
-tensor_Hard_Chuck_Grip = tensor(df_Hard_Chuck_Grip.values)
-tensor_Hard_Hand_Open = tensor(df_Hard_Hand_Open.values)
+tensor_Hard_No_movement = tensor(df_Hard_No_movement.values, dtype=torch.float32)
+tensor_Hard_Wrist_Flexion = tensor(df_Hard_Wrist_Flexion.values, dtype=torch.float32)
+tensor_Hard_Wrist_Extension = tensor(df_Hard_Wrist_Extension.values, dtype=torch.float32)
+tensor_Hard_Wrist_Pronation = tensor(df_Hard_Wrist_Pronation.values, dtype=torch.float32)
+tensor_Hard_Wrist_Supination = tensor(df_Hard_Wrist_Supination.values, dtype=torch.float32)
+tensor_Hard_Chuck_Grip = tensor(df_Hard_Chuck_Grip.values, dtype=torch.float32)
+tensor_Hard_Hand_Open = tensor(df_Hard_Hand_Open.values, dtype=torch.float32)
 print ("Hard intensity Tensors Loaded")
 
 
