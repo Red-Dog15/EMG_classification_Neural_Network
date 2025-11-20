@@ -1,21 +1,18 @@
 """ Example Data : https://github.com/LibEMG/ContractionIntensity/blob/main/Info.txt"""
-
+import os
+print(os.path.abspath("./example_data/S1_Hard_C1_R1.csv"))
 # Convert CSV to DATAFRAMES
 import pandas as pd
 
 # assign variables for CSV paths of example movements
-print ("CSV's Loading...")
 
-CSV_No_Movement = "Example_data\S1_Hard_C1_R1.csv"
-CSV_Wrist_Flexion = "Example_data\S2_Hard_C1_R1.csv"
-CSV_Wrist_Extension = "Example_data\S3_Hard_C1_R1.csv"
-CSV_Wrist_Pronation = "Example_data\S4_Hard_C1_R1.csv"
-CSV_Wrist_Supination = "Example_data\S5_Hard_C1_R1.csv"
-CSV_Chuck_Grip = "Example_data\S6_Hard_C1_R1.csv"
-CSV_Hand_Open = "Example_data\S7_Hard_C1_R1.csv"
-
-print ("CSV's Loaded")
-
+CSV_No_Movement = r"./data/example_data/S1_Hard_C1_R1.csv"
+CSV_Wrist_Flexion = r"./data/example_data/S1_Hard_C2_R1.csv"
+CSV_Wrist_Extension = r"./data/example_data/S1_Hard_C3_R1.csv"
+CSV_Wrist_Pronation = r"./data/example_data/S1_Hard_C4_R1.csv"
+CSV_Wrist_Supination = r"./data/example_data/S1_Hard_C5_R1.csv"
+CSV_Chuck_Grip = r"./data/example_data/S1_Hard_C6_R1.csv"
+CSV_Hand_Open = r"./data/example_data/S1_Hard_C7_R1.csv"
 
 # create panda dataframes equivelents
 print ("dataframes Loading...")
