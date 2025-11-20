@@ -1,0 +1,9 @@
+# Minimal requirements for CNN_Decoder_For_sEMG_Data
+torch
+torchvision
+torchaudio
+mat4py
+numpy
+scipy
+h5py
+pandas
