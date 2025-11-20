@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+import torch
+
 def plot_window(window):
     # window shape: (seq_len, channels)
     seq_len, channels = window.shape
@@ -9,3 +11,5 @@ def plot_window(window):
     plt.xlabel("samples")
     plt.tight_layout()
     plt.show()
+    
+plot_window(10 * torch.rand(100, 8))  # example usage with random data
