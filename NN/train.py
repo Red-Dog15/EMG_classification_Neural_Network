@@ -219,13 +219,16 @@ def train_model(
     criterion = MultiTaskLoss(movement_weight=1.0, severity_weight=1.0)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=5, verbose=True
+        optimizer, mode='min', factor=0.5, patience=5
     )
     
-    # TensorBoard logging
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_dir = f'./runs/emg_training_{timestamp}'
-    writer = SummaryWriter(log_dir)
+    # TensorBoard logging (optional)
+    writer = None
+    if TENSORBOARD_AVAILABLE:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_dir = f'./runs/emg_training_{timestamp}'
+        writer = SummaryWriter(log_dir)
+        print(f"TensorBoard logging enabled: {log_dir}")
     
     # Training loop
     print("\n=== Starting Training ===")
@@ -250,13 +253,14 @@ def train_model(
               f"Movement Acc: {test_metrics['movement_acc']:.4f}, "
               f"Severity Acc: {test_metrics['severity_acc']:.4f}")
         
-        # TensorBoard logging
-        writer.add_scalar('Loss/train', train_metrics['loss'], epoch)
-        writer.add_scalar('Loss/test', test_metrics['loss'], epoch)
-        writer.add_scalar('Accuracy/train_movement', train_metrics['movement_acc'], epoch)
-        writer.add_scalar('Accuracy/test_movement', test_metrics['movement_acc'], epoch)
-        writer.add_scalar('Accuracy/train_severity', train_metrics['severity_acc'], epoch)
-        writer.add_scalar('Accuracy/test_severity', test_metrics['severity_acc'], epoch)
+        # TensorBoard logging (if available)
+        if writer is not None:
+            writer.add_scalar('Loss/train', train_metrics['loss'], epoch)
+            writer.add_scalar('Loss/test', test_metrics['loss'], epoch)
+            writer.add_scalar('Accuracy/train_movement', train_metrics['movement_acc'], epoch)
+            writer.add_scalar('Accuracy/test_movement', test_metrics['movement_acc'], epoch)
+            writer.add_scalar('Accuracy/train_severity', train_metrics['severity_acc'], epoch)
+            writer.add_scalar('Accuracy/test_severity', test_metrics['severity_acc'], epoch)
         
         # Save best model
         if test_metrics['loss'] < best_test_loss:
@@ -289,7 +293,8 @@ def train_model(
     final_path = os.path.join(save_dir, f'final_model_{model_type}.pth')
     torch.save(final_checkpoint, final_path)
     
-    writer.close()
+    if writer is not None:
+        writer.close()
     
     print(f"\n=== Training Complete ===")
     print(f"Best test loss: {best_test_loss:.4f}")
