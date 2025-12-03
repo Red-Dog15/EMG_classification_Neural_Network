@@ -75,7 +75,7 @@ def main():
     
     # 4. Prediction demo
     print("\n--- Step 4: Prediction (Demo) ---")
-    model_path = "./models/best_model_full.pth"
+    model_path = "./models/final_model_full.pth"
     
     if os.path.exists(model_path):
         print(f"Loading trained model from {model_path}...")
