@@ -1,0 +1,197 @@
+"""
+EMG Multi-Task Neural Network for Movement and Severity Classification.
+
+This model predicts:
+1. Movement class (7 classes): No movement, Wrist Flexion, Extension, etc.
+2. Severity level (3 classes): Light, Medium, Hard
+
+Architecture: CNN + GRU with dual output heads
+"""
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class EMG_MultiTask_Model(nn.Module):
+    """
+    Multi-task model for EMG classification.
+    Predicts both movement type and contraction severity.
+    """
+    
+    def __init__(self, num_channels=8, num_movements=7, num_severities=3, 
+                 hidden_size=64, dropout=0.3):
+        """
+        Args:
+            num_channels: Number of EMG channels (default 8)
+            num_movements: Number of movement classes (default 7)
+            num_severities: Number of severity levels (default 3)
+            hidden_size: Size of hidden layers
+            dropout: Dropout probability for regularization
+        """
+        super(EMG_MultiTask_Model, self).__init__()
+        
+        self.num_channels = num_channels
+        self.num_movements = num_movements
+        self.num_severities = num_severities
+        
+        # ---- CNN Feature Extractor ----
+        # Input: (batch, seq_len, channels)
+        self.conv1 = nn.Conv1d(num_channels, 32, kernel_size=5, padding=2)
+        self.bn1 = nn.BatchNorm1d(32)
+        self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.pool = nn.MaxPool1d(kernel_size=2)
+        
+        # ---- Temporal Feature Extraction (GRU) ----
+        self.gru = nn.GRU(
+            input_size=64,
+            hidden_size=hidden_size,
+            num_layers=2,
+            batch_first=True,
+            dropout=dropout if dropout > 0 else 0,
+            bidirectional=True
+        )
+        
+        # ---- Shared Feature Layer ----
+        self.shared_fc = nn.Linear(hidden_size * 2, 128)  # *2 for bidirectional
+        self.dropout = nn.Dropout(dropout)
+        
+        # ---- Task-Specific Output Heads ----
+        # Movement classification head
+        self.movement_head = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, num_movements)
+        )
+        
+        # Severity classification head
+        self.severity_head = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, num_severities)
+        )
+        
+    def forward(self, x):
+        """
+        Forward pass.
+        
+        Args:
+            x: Input tensor (batch_size, seq_len, num_channels)
+            
+        Returns:
+            movement_logits: (batch_size, num_movements)
+            severity_logits: (batch_size, num_severities)
+        """
+        batch_size = x.size(0)
+        
+        # Transpose for Conv1d: (batch, channels, seq_len)
+        x = x.transpose(1, 2)
+        
+        # CNN layers
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.pool(x)
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.pool(x)
+        
+        # Transpose back for GRU: (batch, seq_len, features)
+        x = x.transpose(1, 2)
+        
+        # GRU layers
+        gru_out, _ = self.gru(x)  # (batch, seq_len, hidden_size*2)
+        
+        # Take last timestep output
+        last_out = gru_out[:, -1, :]  # (batch, hidden_size*2)
+        
+        # Shared feature extraction
+        shared_features = F.relu(self.shared_fc(last_out))
+        shared_features = self.dropout(shared_features)
+        
+        # Task-specific predictions
+        movement_logits = self.movement_head(shared_features)
+        severity_logits = self.severity_head(shared_features)
+        
+        return movement_logits, severity_logits
+
+
+class LightweightEMG_Model(nn.Module):
+    """
+    Lightweight version for faster training and inference.
+    Good for testing and microcontroller deployment.
+    """
+    
+    def __init__(self, num_channels=8, num_movements=7, num_severities=3):
+        super(LightweightEMG_Model, self).__init__()
+        
+        # Simple CNN
+        self.conv1 = nn.Conv1d(num_channels, 16, kernel_size=5, padding=2)
+        self.conv2 = nn.Conv1d(16, 32, kernel_size=3, padding=1)
+        self.pool = nn.AdaptiveAvgPool1d(1)
+        
+        # Shared features
+        self.fc_shared = nn.Linear(32, 64)
+        
+        # Output heads
+        self.fc_movement = nn.Linear(64, num_movements)
+        self.fc_severity = nn.Linear(64, num_severities)
+        
+    def forward(self, x):
+        # x: (batch, seq_len, channels)
+        x = x.transpose(1, 2)  # -> (batch, channels, seq_len)
+        
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.pool(x).squeeze(-1)  # (batch, 32)
+        
+        shared = F.relu(self.fc_shared(x))
+        
+        movement_logits = self.fc_movement(shared)
+        severity_logits = self.fc_severity(shared)
+        
+        return movement_logits, severity_logits
+
+
+def create_model(model_type='full', **kwargs):
+    """
+    Factory function to create models.
+    
+    Args:
+        model_type: 'full' or 'lightweight'
+        **kwargs: Arguments to pass to model constructor
+        
+    Returns:
+        model: PyTorch model
+    """
+    if model_type == 'lightweight':
+        return LightweightEMG_Model(**kwargs)
+    else:
+        return EMG_MultiTask_Model(**kwargs)
+
+
+# Legacy commented code for reference
+"""
+import torch.nn as nn
+import torch.nn.functional as F
+
+class Model(nn.Module):
+    def __init__(self):
+        super(Model, self).__init__()
+        
+        # define layers here
+        # input: 3 features for each electrode, output: 6 features
+        self.layer1 = nn.Linear(3, 6) # output 6 for now
+        self.layer2 = nn.Linear(6, 6) # keep 6 for now
+        self.layer3 = nn.Linear(6, 1) # backWW to 3 features for each electrode
+        # initialize activation functions
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.relu(x)
+        x = self.layer2(x)
+        x = self.relu(x)
+        x = self.layer3(x)
+        return x
+"""

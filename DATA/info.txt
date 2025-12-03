@@ -1,0 +1,1 @@
+This Folder Includes Example DATA (EMG) Used To Train The Nueral Network Model
