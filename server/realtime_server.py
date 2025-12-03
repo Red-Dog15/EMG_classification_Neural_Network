@@ -53,14 +53,16 @@ class EMGRealtimeServer:
         self.buffer = deque(maxlen=window_size)
         self.is_streaming = False
         self.stream_thread = None
+        self.auto_loop = True  # Loop file continuously
         
         # Prediction settings
-        self.prediction_rate = 10  # Hz (predictions per second)
-        self.samples_per_prediction = 5  # New samples to read before next prediction
+        self.prediction_rate = 20  # Hz (predictions per second)
+        self.samples_per_prediction = 10  # New samples to read before next prediction
         
         # Latest prediction
         self.latest_prediction = None
         self.prediction_lock = threading.Lock()
+        self.prediction_history = deque(maxlen=50)  # Keep last 50 predictions for smoothing
         
     def load_file(self, csv_path):
         """
@@ -94,7 +96,7 @@ class EMGRealtimeServer:
     def start_streaming(self):
         """Start streaming predictions from current file."""
         if self.current_file is None:
-            print("Error: No file loaded. Use 'load <filename>' first.")
+            print("Error: No file loaded. Use 'load <number>' first.")
             return
         
         if self.is_streaming:
@@ -104,14 +106,17 @@ class EMGRealtimeServer:
         self.is_streaming = True
         self.current_index = 0
         self.buffer.clear()
+        self.prediction_history.clear()
         
         # Start streaming thread
         self.stream_thread = threading.Thread(target=self._stream_loop, daemon=True)
         self.stream_thread.start()
         
-        print(f"\n[STREAMING] Started real-time prediction from {os.path.basename(self.current_file)}")
+        print(f"\n[STREAMING] Real-time prediction started")
+        print(f"  File: {os.path.basename(self.current_file)}")
         print(f"  Update rate: {self.prediction_rate} Hz")
-        print(f"  Window size: {self.window_size} samples")
+        print(f"  Mode: Continuous loop")
+        print("\nPredictions will update in real-time. Use 'load <#>' to switch files.\n")
     
     def stop_streaming(self):
         """Stop streaming predictions."""
@@ -126,14 +131,11 @@ class EMGRealtimeServer:
         print("\n[STOPPED] Streaming halted.")
     
     def _stream_loop(self):
-        """Internal streaming loop (runs in separate thread)."""
-        # Collect all predictions across entire file
-        all_movement_probs = []
-        all_severity_probs = []
+        """Internal streaming loop (runs in separate thread) - continuous real-time predictions."""
+        last_print_time = time.time()
+        print_interval = 0.5  # Update display every 0.5 seconds
         
-        print("\nProcessing file...")
-        
-        while self.is_streaming and self.current_index < len(self.emg_data):
+        while self.is_streaming:
             # Read next batch of samples
             end_idx = min(self.current_index + self.samples_per_prediction, len(self.emg_data))
             new_samples = self.emg_data[self.current_index:end_idx]
@@ -144,59 +146,37 @@ class EMGRealtimeServer:
             
             self.current_index = end_idx
             
+            # Loop back to start when reaching end of file
+            if self.current_index >= len(self.emg_data):
+                self.current_index = 0
+            
             # Make prediction if buffer is full
             if len(self.buffer) == self.window_size:
-                prediction_probs = self._get_prediction_probs()
-                all_movement_probs.append(prediction_probs['movement_probs'])
-                all_severity_probs.append(prediction_probs['severity_probs'])
+                prediction = self._make_prediction()
                 
-                # Update progress (every 10%)
-                progress = (self.current_index / len(self.emg_data)) * 100
-                if int(progress) % 10 == 0 and len(all_movement_probs) > 1:
-                    prev_progress = ((self.current_index - self.samples_per_prediction) / len(self.emg_data)) * 100
-                    if int(prev_progress) % 10 != int(progress) % 10:
-                        print(f"  Progress: {int(progress)}%")
+                # Store in history for smoothing
+                self.prediction_history.append(prediction)
+                
+                # Get smoothed prediction (majority vote over last few predictions)
+                smoothed = self._get_smoothed_prediction()
+                
+                with self.prediction_lock:
+                    self.latest_prediction = smoothed
+                
+                # Print prediction at regular intervals
+                current_time = time.time()
+                if current_time - last_print_time >= print_interval:
+                    self._print_realtime_prediction(smoothed)
+                    last_print_time = current_time
             
-            # Sleep to maintain realistic timing
+            # Sleep to maintain update rate
             time.sleep(1.0 / self.prediction_rate)
-        
-        # Aggregate all predictions
-        if all_movement_probs and self.is_streaming:
-            avg_movement_probs = np.mean(all_movement_probs, axis=0)
-            avg_severity_probs = np.mean(all_severity_probs, axis=0)
-            
-            movement_pred = np.argmax(avg_movement_probs)
-            severity_pred = np.argmax(avg_severity_probs)
-            
-            final_prediction = {
-                'movement': MOVEMENT_LABELS[movement_pred],
-                'movement_conf': avg_movement_probs[movement_pred],
-                'severity': SEVERITY_LABELS[severity_pred],
-                'severity_conf': avg_severity_probs[severity_pred],
-                'num_windows': len(all_movement_probs)
-            }
-            
-            with self.prediction_lock:
-                self.latest_prediction = final_prediction
-            
-            # Print final result
-            print("\n" + "="*60)
-            print("FINAL PREDICTION")
-            print("="*60)
-            print(f"  Movement: {final_prediction['movement']:20s} ({final_prediction['movement_conf']*100:5.1f}%)")
-            print(f"  Severity: {final_prediction['severity']:10s} ({final_prediction['severity_conf']*100:5.1f}%)")
-            print(f"  Windows analyzed: {final_prediction['num_windows']}")
-            print("="*60)
-        
-        # End of file
-        if self.is_streaming:
-            self.is_streaming = False
     
-    def _get_prediction_probs(self):
-        """Get probability distributions from current buffer."""
+    def _make_prediction(self):
+        """Make single prediction from current buffer."""
         # Convert buffer to tensor
         buffer_array = np.array(list(self.buffer))
-        emg_tensor = torch.tensor(buffer_array, dtype=torch.float32).unsqueeze(0)  # [1, window_size, 8]
+        emg_tensor = torch.tensor(buffer_array, dtype=torch.float32).unsqueeze(0)
         emg_tensor = emg_tensor.to(self.device)
         
         # Predict
@@ -206,11 +186,77 @@ class EMGRealtimeServer:
             
             movement_probs = torch.softmax(movement_logits, dim=1)
             severity_probs = torch.softmax(severity_logits, dim=1)
+            
+            movement_pred = torch.argmax(movement_probs, dim=1).item()
+            severity_pred = torch.argmax(severity_probs, dim=1).item()
+            
+            movement_conf = movement_probs[0, movement_pred].item()
+            severity_conf = severity_probs[0, severity_pred].item()
         
         return {
-            'movement_probs': movement_probs[0].cpu().numpy(),
-            'severity_probs': severity_probs[0].cpu().numpy()
+            'movement': MOVEMENT_LABELS[movement_pred],
+            'movement_idx': movement_pred,
+            'movement_conf': movement_conf,
+            'severity': SEVERITY_LABELS[severity_pred],
+            'severity_idx': severity_pred,
+            'severity_conf': severity_conf,
+            'timestamp': time.time()
         }
+    
+    def _get_smoothed_prediction(self):
+        """Get smoothed prediction using majority vote from recent history."""
+        if len(self.prediction_history) == 0:
+            return None
+        
+        # Use last N predictions for smoothing
+        recent = list(self.prediction_history)[-10:]
+        
+        # Count occurrences of each movement
+        movement_counts = {}
+        severity_counts = {}
+        
+        for pred in recent:
+            mov = pred['movement']
+            sev = pred['severity']
+            movement_counts[mov] = movement_counts.get(mov, 0) + 1
+            severity_counts[sev] = severity_counts.get(sev, 0) + 1
+        
+        # Get most common
+        best_movement = max(movement_counts.items(), key=lambda x: x[1])[0]
+        best_severity = max(severity_counts.items(), key=lambda x: x[1])[0]
+        
+        # Get average confidence for the chosen classes
+        mov_confs = [p['movement_conf'] for p in recent if p['movement'] == best_movement]
+        sev_confs = [p['severity_conf'] for p in recent if p['severity'] == best_severity]
+        
+        return {
+            'movement': best_movement,
+            'movement_conf': np.mean(mov_confs) if mov_confs else 0.0,
+            'severity': best_severity,
+            'severity_conf': np.mean(sev_confs) if sev_confs else 0.0,
+            'stability': len(mov_confs) / len(recent)  # How stable is this prediction
+        }
+    
+    def _print_realtime_prediction(self, pred):
+        """Print prediction in real-time format with progress bar."""
+        if pred is None:
+            return
+        
+        # Calculate progress through file
+        progress = (self.current_index / len(self.emg_data)) * 100
+        bar_length = 30
+        filled = int(bar_length * progress / 100)
+        bar = '█' * filled + '░' * (bar_length - filled)
+        
+        # Stability indicator
+        stability = pred.get('stability', 1.0)
+        stability_icon = '●' if stability > 0.7 else '◐' if stability > 0.4 else '○'
+        
+        # Clear line and print
+        print(f"\r[{bar}] {progress:5.1f}% | "
+              f"{stability_icon} Movement: {pred['movement']:20s} ({pred['movement_conf']*100:5.1f}%) | "
+              f"Severity: {pred['severity']:10s} ({pred['severity_conf']*100:5.1f}%)", 
+              end='', flush=True)
     
     def get_latest_prediction(self):
         """Get the most recent prediction (thread-safe)."""
@@ -300,17 +346,25 @@ class EMGRealtimeServer:
                         print("Use 'list' to see available files")
                         continue
                     
-                    # Stop streaming if active
-                    if self.is_streaming:
-                        self.stop_streaming()
-                        time.sleep(0.5)
-                    
-                    # Load by number only
+                    # Load by number only (don't stop streaming - hot swap!)
                     if parts[1].isdigit():
                         idx = int(parts[1]) - 1
                         if 0 <= idx < len(available_files):
                             filepath = os.path.join("./DATA/Example_data", available_files[idx])
-                            self.load_file(filepath)
+                            
+                            # Load new file
+                            df = pd.read_csv(filepath)
+                            self.emg_data = df.values
+                            self.current_file = filepath
+                            self.current_index = 0
+                            
+                            # Clear buffers but keep streaming
+                            if self.is_streaming:
+                                self.buffer.clear()
+                                self.prediction_history.clear()
+                                print(f"\n[SWITCHED] Now predicting: {os.path.basename(filepath)}\n")
+                            else:
+                                print(f"\n[LOADED] {os.path.basename(filepath)}")
                         else:
                             print(f"Invalid number. Choose 1-{len(available_files)}")
                     else:
@@ -323,6 +377,7 @@ class EMGRealtimeServer:
                     self.stop_streaming()
                 
                 elif cmd == 'status':
+                    status_pred = self.get_latest_prediction()
                     print("\n" + "="*60)
                     print("Server Status")
                     print("="*60)
@@ -330,14 +385,16 @@ class EMGRealtimeServer:
                     print(f"  Streaming: {'Yes' if self.is_streaming else 'No'}")
                     if self.current_file and self.emg_data is not None:
                         progress = (self.current_index / len(self.emg_data)) * 100
-                        print(f"  Progress: {self.current_index}/{len(self.emg_data)} ({progress:.1f}%)")
-                    print(f"  Prediction rate: {self.prediction_rate} Hz")
+                        print(f"  Progress: {progress:.1f}%")
+                    print(f"  Update rate: {self.prediction_rate} Hz")
                     print(f"  Window size: {self.window_size} samples")
                     
-                    if self.latest_prediction:
-                        print(f"\n  Latest prediction:")
-                        print(f"    Movement: {self.latest_prediction['movement']} ({self.latest_prediction['movement_conf']*100:.1f}%)")
-                        print(f"    Severity: {self.latest_prediction['severity']} ({self.latest_prediction['severity_conf']*100:.1f}%)")
+                    if status_pred:
+                        print(f"\n  Current prediction:")
+                        print(f"    Movement: {status_pred['movement']} ({status_pred['movement_conf']*100:.1f}%)")
+                        print(f"    Severity: {status_pred['severity']} ({status_pred['severity_conf']*100:.1f}%)")
+                        if 'stability' in status_pred:
+                            print(f"    Stability: {status_pred['stability']*100:.0f}%")
                     print("="*60)
                 
                 else:
