@@ -10,9 +10,17 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from datetime import datetime
+
+# Optional tensorboard support
+try:
+    from torch.utils.tensorboard import SummaryWriter
+    TENSORBOARD_AVAILABLE = True
+except ImportError:
+    TENSORBOARD_AVAILABLE = False
+    print("Warning: TensorBoard not available. Training metrics will only be printed to console.")
+    print("Install with: pip install tensorboard")
 
 from DATA.Data_Conversion import create_labeled_dataset, get_num_classes, MOVEMENT_LABELS, SEVERITY_LABELS
 from DATA.dataset import create_dataloaders, get_dataset_statistics
