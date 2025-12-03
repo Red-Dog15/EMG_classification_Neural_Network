@@ -132,32 +132,88 @@ tensors_dict = {
     
     "Light": [
     
-    [1] = tensor_Light_No_movement, 
-    [2] = tensor_Light_Wrist_Flexion,
-    [3] = tensor_Light_Wrist_Extension,
-    [4] = tensor_Light_Wrist_Pronation, 
-    [5] = tensor_Light_Wrist_Supination, 
-    [6] = tensor_Light_Chuck_Grip,
-    [7] = tensor_Light_Hand_Open],
+    [0] = tensor_Light_No_movement, 
+    [1] = tensor_Light_Wrist_Flexion,
+    [2] = tensor_Light_Wrist_Extension,
+    [3] = tensor_Light_Wrist_Pronation, 
+    [4] = tensor_Light_Wrist_Supination, 
+    [5] = tensor_Light_Chuck_Grip,
+    [6] = tensor_Light_Hand_Open],
     
     "Medium": [
     
-    [1] = tensor_Medium_No_movement, 
-    [2] = tensor_Medium_Wrist_Flexion,
-    [3] = tensor_Medium_Wrist_Extension,
-    [4] = tensor_Medium_Wrist_Pronation, 
-    [5] = tensor_Medium_Wrist_Supination, 
-    [6] = tensor_Medium_Chuck_Grip,
-    [7] = tensor_Medium_Hand_Open],
+    [0] = tensor_Medium_No_movement, 
+    [1] = tensor_Medium_Wrist_Flexion,
+    [2] = tensor_Medium_Wrist_Extension,
+    [3] = tensor_Medium_Wrist_Pronation, 
+    [4] = tensor_Medium_Wrist_Supination, 
+    [5] = tensor_Medium_Chuck_Grip,
+    [6] = tensor_Medium_Hand_Open],
     
      "Hard": [
     
-    [1] = tensor_Hard_No_movement, 
-    [2] = tensor_Hard_Wrist_Flexion,
-    [3] = tensor_Hard_Wrist_Extension,
-    [4] = tensor_Hard_Wrist_Pronation, 
-    [5] = tensor_Hard_Wrist_Supination, 
-    [6] = tensor_Hard_Chuck_Grip,
-    [7] = tensor_Hard_Hand_Open],
+    [0] = tensor_Hard_No_movement, 
+    [1] = tensor_Hard_Wrist_Flexion,
+    [2] = tensor_Hard_Wrist_Extension,
+    [3] = tensor_Hard_Wrist_Pronation, 
+    [4] = tensor_Hard_Wrist_Supination, 
+    [5] = tensor_Hard_Chuck_Grip,
+    [6] = tensor_Hard_Hand_Open],
 }
 """
+
+# --- Label Mappings ---
+MOVEMENT_LABELS = {
+    0: "No_Movement",
+    1: "Wrist_Flexion", 
+    2: "Wrist_Extension",
+    3: "Wrist_Pronation",
+    4: "Wrist_Supination",
+    5: "Chuck_Grip",
+    6: "Hand_Open"
+}
+
+SEVERITY_LABELS = {
+    0: "Light",
+    1: "Medium",
+    2: "Hard"
+}
+
+# Reverse mappings for encoding
+MOVEMENT_TO_IDX = {v: k for k, v in MOVEMENT_LABELS.items()}
+SEVERITY_TO_IDX = {v: k for k, v in SEVERITY_LABELS.items()}
+
+
+def create_labeled_dataset():
+    """
+    Create a dataset with labels for training.
+    
+    Returns:
+        list of tuples: [(tensor_data, movement_label, severity_label), ...]
+        Each tensor_data is shape (num_samples, 8) for 8 EMG channels
+    """
+    labeled_data = []
+    
+    for severity_name, movement_list in tensors_dict.items():
+        severity_idx = SEVERITY_TO_IDX[severity_name]
+        
+        for movement_idx, tensor_data in enumerate(movement_list):
+            # Each tensor is (num_samples, 8 channels)
+            # Add labels: (data, movement_class, severity_level)
+            labeled_data.append((tensor_data, movement_idx, severity_idx))
+    
+    return labeled_data
+
+
+def get_num_classes():
+    """Return number of movement classes and severity levels."""
+    return len(MOVEMENT_LABELS), len(SEVERITY_LABELS)
+
+
+# Export new functions and constants
+__all__ = [
+    'tensors_dict', 'dfs_dict', 
+    'MOVEMENT_LABELS', 'SEVERITY_LABELS',
+    'MOVEMENT_TO_IDX', 'SEVERITY_TO_IDX',
+    'create_labeled_dataset', 'get_num_classes'
+]
