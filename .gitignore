@@ -37,3 +37,7 @@ Thumbs.db
 
 # Personal documentation (not for repository)
 METHODOLOGY.md
+ADVISOR_PRESENTATION.md
+
+# Test files
+test_predictions.py
