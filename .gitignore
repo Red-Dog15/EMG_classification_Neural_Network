@@ -1,1 +1,36 @@
+# Python virtual environment
 *.venv/
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Training outputs
+models/
+runs/
+*.pth
+*.pt
+
+# Data files (if large)
+*.csv
+*.h5
+*.mat
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
