@@ -34,3 +34,6 @@ Thumbs.db
 # Jupyter
 .ipynb_checkpoints/
 *.ipynb
+
+# Personal documentation (not for repository)
+METHODOLOGY.md

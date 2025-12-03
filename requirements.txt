@@ -2,13 +2,15 @@
 torch>=2.0.0
 numpy>=1.23.0
 pandas>=1.5.0
+tensorboard>=2.12.0
 
-# Optional: For training visualization
-# tensorboard>=2.12.0
+# Optional - for extended functionality
+# matplotlib>=3.7.0  # For visualization
+# scikit-learn>=1.2.0  # For metrics
 
-# Legacy requirements (if needed)
-torchvision
-torchaudio
-mat4py
-scipy
-h5py
+# Legacy (if using older data formats)
+# torchvision
+# torchaudio
+# mat4py
+# scipy
+# h5py

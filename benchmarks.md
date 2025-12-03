@@ -72,3 +72,11 @@ This file contains Information about the benchmarks and timeline of the project
 
 * ORDERED COMPONENTS 
 * Built up GIT WORKFLOW
+* Trained Models on sEMG Example Data
+    * Final training accuracy after 30 Epcohs:
+      * Movement Accuracy: 98.05%
+      * Severity Accuracy: 97.92%
+
+- Need TO DO:
+  - Implement Real-Time NN and Test with Hardware
+  - Link to Unity for Simulation

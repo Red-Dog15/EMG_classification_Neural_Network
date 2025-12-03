@@ -121,27 +121,80 @@ def predict_from_tensor(model, emg_data, window_size=100, device=None):
     return results
 
 
-def predict_from_csv(model, csv_path, window_size=100, device=None):
+def predict_from_csv(model, csv_path, window_size=100, stride=50, device=None):
     """
-    Make predictions on EMG data from CSV file.
+    Make predictions on EMG data from CSV file using sliding windows.
+    Aggregates predictions across all windows for more robust results.
     
     Args:
         model: Trained model
         csv_path: Path to CSV file with 8 EMG channels
         window_size: Window size for prediction
+        stride: Stride for sliding windows (default: 50 for 50% overlap)
         device: Device to run inference on
         
     Returns:
-        dict: Prediction results
+        dict: Aggregated prediction results across all windows
     """
     # Load CSV
     df = pd.read_csv(csv_path)
     
     # Convert to tensor
-    emg_tensor = torch.tensor(df.values, dtype=torch.float32)
+    emg_full = torch.tensor(df.values, dtype=torch.float32)
     
-    # Make prediction
-    results = predict_from_tensor(model, emg_tensor, window_size, device)
+    if device is None:
+        device = next(model.parameters()).device
+    
+    model.eval()
+    
+    # Create sliding windows
+    num_samples = emg_full.shape[0]
+    windows = []
+    
+    for start_idx in range(0, num_samples - window_size + 1, stride):
+        end_idx = start_idx + window_size
+        window = emg_full[start_idx:end_idx, :]
+        windows.append(window)
+    
+    # If no complete windows, use last window_size samples
+    if len(windows) == 0:
+        if num_samples >= window_size:
+            windows.append(emg_full[-window_size:, :])
+        else:
+            # Pad if too short
+            padding = torch.zeros(window_size - num_samples, 8)
+            windows.append(torch.cat([padding, emg_full], dim=0))
+    
+    # Stack windows into batch
+    batch = torch.stack(windows).to(device)
+    
+    # Predict on all windows
+    with torch.no_grad():
+        movement_logits, severity_logits = model(batch)
+        
+        # Get probabilities for each window
+        movement_probs = torch.softmax(movement_logits, dim=1)
+        severity_probs = torch.softmax(severity_logits, dim=1)
+        
+        # Average probabilities across all windows
+        avg_movement_probs = movement_probs.mean(dim=0)
+        avg_severity_probs = severity_probs.mean(dim=0)
+        
+        # Get final predictions from averaged probabilities
+        movement_pred = torch.argmax(avg_movement_probs).item()
+        severity_pred = torch.argmax(avg_severity_probs).item()
+    
+    results = {
+        'movement_pred': movement_pred,
+        'movement_name': MOVEMENT_LABELS[movement_pred],
+        'movement_probs': avg_movement_probs.cpu().numpy(),
+        'movement_confidence': avg_movement_probs[movement_pred].item(),
+        'severity_pred': severity_pred,
+        'severity_name': SEVERITY_LABELS[severity_pred],
+        'severity_probs': avg_severity_probs.cpu().numpy(),
+        'severity_confidence': avg_severity_probs[severity_pred].item(),
+        'num_windows': len(windows)
+    }
     
     return results
 
@@ -196,7 +249,7 @@ def print_prediction(results, verbose=True):
         for idx, prob in enumerate(results['severity_probs']):
             print(f"  {SEVERITY_LABELS[idx]:20s}: {prob*100:5.1f}%")
     
-    print("=" * 30 + "\n")
+    print("=" * 30)
 
 
 # Example usage
