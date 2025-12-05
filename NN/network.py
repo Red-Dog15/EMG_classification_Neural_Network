@@ -37,25 +37,31 @@ class EMG_MultiTask_Model(nn.Module):
         
         # ---- CNN Feature Extractor ----
         # Input: (batch, seq_len, channels)
-        self.conv1 = nn.Conv1d(num_channels, 32, kernel_size=5, padding=2)
-        self.bn1 = nn.BatchNorm1d(32)
-        self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1)
-        self.bn2 = nn.BatchNorm1d(64)
-        self.pool = nn.MaxPool1d(kernel_size=2)
+        self.conv1 = nn.Conv1d(num_channels, 32, kernel_size=5, padding=2) # first CNN layer, Kernal size 5 looks at 5 consecutive time samples
+        self.bn1 = nn.BatchNorm1d(32) # normalize data
+        self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1) # second CNN layer, padding  adds x zeroes to each end of the input
+        self.bn2 = nn.BatchNorm1d(64) 
+        self.pool = nn.MaxPool1d(kernel_size=2) # take maximum value from every (kernal_size) consecutive samples for computational efficiency
         
         # ---- Temporal Feature Extraction (GRU) ----
-        self.gru = nn.GRU(
-            input_size=64,
-            hidden_size=hidden_size,
-            num_layers=2,
-            batch_first=True,
-            dropout=dropout if dropout > 0 else 0,
-            bidirectional=True
+        self.gru = nn.GRU( # Gated Recurrent Unit layer for sequential data
+            input_size=64, # each time step has 64 features from CNN
+            hidden_size=hidden_size, # size of GRU hidden state
+            num_layers=2, # number of stacked GRU layers
+            batch_first=True,  # expects input as (batch, seq_len, features)
+            dropout=dropout if dropout > 0 else 0, # probability of an element to be zeroed
+            bidirectional=True # use both forward and backward GRU
         )
+        
+        """
+        GRU Functionality: 
+        - Captures temporal dependencies in sequential EMG data
+        - Bidirectional GRU processes data in both time directions
+        """
         
         # ---- Shared Feature Layer ----
         self.shared_fc = nn.Linear(hidden_size * 2, 128)  # *2 for bidirectional
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout) # randomly sets 30% of neurons to 0 to prevent overfitting in training
         
         # ---- Task-Specific Output Heads ----
         # Movement classification head
@@ -91,8 +97,8 @@ class EMG_MultiTask_Model(nn.Module):
         x = x.transpose(1, 2)
         
         # CNN layers
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = self.pool(x)
+        x = F.relu(self.bn1(self.conv1(x))) # implement and normalize first conv layer
+        x = self.pool(x) #implement pool layer
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.pool(x)
         
@@ -102,7 +108,7 @@ class EMG_MultiTask_Model(nn.Module):
         # GRU layers
         gru_out, _ = self.gru(x)  # (batch, seq_len, hidden_size*2)
         
-        # Take last timestep output
+        # Take last timestep output 
         last_out = gru_out[:, -1, :]  # (batch, hidden_size*2)
         
         # Shared feature extraction
