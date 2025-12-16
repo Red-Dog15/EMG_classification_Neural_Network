@@ -1,4 +1,4 @@
-# Project Updates
+ Project Updates
 
 Development log for EMG Classification Neural Network
 

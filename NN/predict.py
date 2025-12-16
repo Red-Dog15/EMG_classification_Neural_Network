@@ -251,7 +251,14 @@ def print_prediction(results, verbose=True):
     
     print("=" * 30)
 
-
+def save_prediction(results, file_out):
+    """
+    Pretty print prediction results.
+    
+    Args:
+        results: result from predict_* functions
+    """
+    
 # Example usage
 if __name__ == "__main__":
     # Example: Load model and make prediction

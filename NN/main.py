@@ -58,20 +58,21 @@ def main():
     print("  - Save the best model to ./models/")
     print("  - Log training metrics to TensorBoard")
     
-    # Uncomment to train:
-    # train_mode = input("\nTrain model now? (y/n): ").lower()
-    # if train_mode == 'y':
-    #     model, metrics = train_model(
-    #         model_type='full',
-    #         num_epochs=30,
-    #         batch_size=32,
-    #         learning_rate=0.001,
-    #         window_size=100,
-    #         stride=50
-    #     )
-    #     print(f"\nTraining complete!")
-    #     print(f"Movement Accuracy: {metrics['movement_acc']*100:.2f}%")
-    #     print(f"Severity Accuracy: {metrics['severity_acc']*100:.2f}%")
+    #Uncomment to train:
+    
+    train_mode = input("\nTrain model now? (y/n): ").lower()
+    if train_mode == 'y':
+        model, metrics = train_model(
+           model_type='full',
+            num_epochs=30,
+            batch_size=32,
+            learning_rate=0.001,
+            window_size=100,
+            stride=50
+        )
+        print(f"\nTraining complete!")
+        print(f"Movement Accuracy: {metrics['movement_acc']*100:.2f}%")
+        print(f"Severity Accuracy: {metrics['severity_acc']*100:.2f}%")
     
     # 4. Prediction demo
     print("\n--- Step 4: Prediction (Demo) ---")
@@ -87,10 +88,14 @@ def main():
             print(f"\nMaking prediction on: {csv_path}")
             results = predict_from_csv(model, csv_path, window_size=100)
             print_prediction(results, verbose=True)
+        else:
+            print("Cant find Data input Path: {csv_path}")
+            return FileExistsError
     else:
         print(f"No trained model found at {model_path}")
         print("Please train a model first!")
     
+    # print closer
     print("\n" + "="*50)
     print("Workflow complete!")
     print("="*50)
