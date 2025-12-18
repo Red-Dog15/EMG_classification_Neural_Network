@@ -1,0 +1,2 @@
+{'movement_pred': 6, 'movement_name': 'Hand_Open', 'movement_probs': array([4.4840513e-07, 3.2622233e-04, 1.1170667e-05, 2.6229152e-02,
+       4.9888395e-04, 1.4519168e-01, 8.2774246e-01], dtype=float32), 'movement_confidence': 0.8277424573898315, 'severity_pred': 2, 'severity_name': 'Hard', 'severity_probs': array([6.552087e-10, 4.989512e-06, 9.999950e-01], dtype=float32), 'severity_confidence': 0.9999949932098389, 'num_windows': 59}

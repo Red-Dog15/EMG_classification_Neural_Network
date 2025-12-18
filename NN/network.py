@@ -11,7 +11,7 @@ Architecture: CNN + GRU with dual output heads
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import os
 
 class EMG_MultiTask_Model(nn.Module):
     """
@@ -121,7 +121,6 @@ class EMG_MultiTask_Model(nn.Module):
         
         return movement_logits, severity_logits
 
-
 class LightweightEMG_Model(nn.Module):
     """
     Lightweight version for faster training and inference.
@@ -201,3 +200,16 @@ class Model(nn.Module):
         x = self.layer3(x)
         return x
 """
+def save_output(output_file, data):
+    """
+    Save prediction results to a text file.
+    
+    Args:
+        output_file: Path to output text file
+        data: Data to write (string or convertible to string)
+    """
+    if os.path.exists(output_file):
+        with open(output_file, "w") as f:
+            f.write(str(data))
+    else:
+        print(f"Output path {output_file} does not exist.")

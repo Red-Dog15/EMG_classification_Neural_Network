@@ -16,6 +16,7 @@ from DATA.dataset import get_dataset_statistics
 from NN.train import train_model
 from NN.predict import load_trained_model, predict_from_csv, print_prediction
 
+results_file = "./NN/Output/prediction_results.txt"
 
 def main():
     """
@@ -60,7 +61,7 @@ def main():
     
     #Uncomment to train:
     
-    train_mode = input("\nTrain model now? (y/n): ").lower()
+    train_mode = input("\nTrain new model now? (y/n): ").lower()
     if train_mode == 'y':
         model, metrics = train_model(
            model_type='full',
@@ -73,7 +74,7 @@ def main():
         print(f"\nTraining complete!")
         print(f"Movement Accuracy: {metrics['movement_acc']*100:.2f}%")
         print(f"Severity Accuracy: {metrics['severity_acc']*100:.2f}%")
-    
+        
     # 4. Prediction demo
     print("\n--- Step 4: Prediction (Demo) ---")
     model_path = "./models/final_model_full.pth"
@@ -88,6 +89,8 @@ def main():
             print(f"\nMaking prediction on: {csv_path}")
             results = predict_from_csv(model, csv_path, window_size=100)
             print_prediction(results, verbose=True)
+            with open(results_file, "w") as f:
+                f.write(str(results))
         else:
             print("Cant find Data input Path: {csv_path}")
             return FileExistsError
