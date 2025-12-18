@@ -16,7 +16,7 @@ from DATA.dataset import get_dataset_statistics
 from NN.train import train_model
 from NN.predict import load_trained_model, predict_from_csv, print_prediction
 
-results_file = "./NN/Output/prediction_results.txt"
+results_file = "./Output/NNO.txt"
 
 def main():
     """
@@ -78,6 +78,8 @@ def main():
     # 4. Prediction demo
     print("\n--- Step 4: Prediction (Demo) ---")
     model_path = "./models/final_model_full.pth"
+
+    from NN.network import save_output_sim # import output save function
     
     if os.path.exists(model_path):
         print(f"Loading trained model from {model_path}...")
@@ -89,8 +91,8 @@ def main():
             print(f"\nMaking prediction on: {csv_path}")
             results = predict_from_csv(model, csv_path, window_size=100)
             print_prediction(results, verbose=True)
-            with open(results_file, "w") as f:
-                f.write(str(results))
+            save_output_sim(results_file, results)
+
         else:
             print("Cant find Data input Path: {csv_path}")
             return FileExistsError

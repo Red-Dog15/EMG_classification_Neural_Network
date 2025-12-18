@@ -200,16 +200,19 @@ class Model(nn.Module):
         x = self.layer3(x)
         return x
 """
-def save_output(output_file, data):
+def save_output_sim(output_file, data, Clear=True):
     """
-    Save prediction results to a text file.
+    Save prediction results to a suitable data file for myosuite simulation.
     
     Args:
-        output_file: Path to output text file
+        output_file: Path to output data file
         data: Data to write (string or convertible to string)
     """
-    if os.path.exists(output_file):
-        with open(output_file, "w") as f:
-            f.write(str(data))
-    else:
+    if not os.path.exists(output_file):
         print(f"Output path {output_file} does not exist.")
+        return FileNotFoundError
+    else:
+        file = open(output_file, "w")
+        file.write(str(data))
+        if Clear:
+            file.close()
