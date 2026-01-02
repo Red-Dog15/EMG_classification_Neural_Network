@@ -16,7 +16,7 @@ def get_MyoSuite_Movement_LUT():
     }
 
 # Mapping utilities for EMG data
-def NN_data_parser(file):
+def data_parser(file):
     """
     Docstring for parse_data
     
@@ -51,6 +51,7 @@ def activation_blender(probability, weights):
 
 class Muscle_Mapping:
     # Movement Pattern Dictionary
+    # for dynamic applications use 1 instance of this class
     
     def __init__(self):
         pass
