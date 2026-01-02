@@ -3,9 +3,19 @@ Docstring for Scripts.DATA.Data_Mapping
 
 this module provides mapping utilities for EMG data classification.
 """
+# Dict for myosuite movmenet applications
+def get_MyoSuite_Movement_LUT():
+    """
+    Returns a lookup table for MyoSuite movement patterns.
+    
+    :return: Dictionary mapping movement names to activation patterns
+    """
+    return {
+        "Hand_Open": [0.0, 0.8, ...],  # Example pattern
+        "Chuck_Grip": [0.9, 0.1, ...]   # Example pattern
+    }
 
 # Mapping utilities for EMG data
-
 def NN_data_parser(file):
     """
     Docstring for parse_data
@@ -31,26 +41,35 @@ def Severity_Converter(severity_level, max_severity=5):
     else:
         raise ValueError(f"Expected severity level must be between 0 and {max_severity}.")
     
-def activation_blender():
+def activation_blender(probability, weights):
     """
     combines probability weightings into mutli-muscle movement pattern
     
-    :param : Description
+    :param : Descriptio
     """
     pass
 
 class Muscle_Mapping:
+    # Movement Pattern Dictionary
+    
     def __init__(self):
         pass
 
-    def Muscle_activation_Index(index):
+    def Muscle_activation_Index(self, index):
         """
         Docstring for Muscle_activation_Index
         
         :param index: Description
         """
         pass
+    
+    def get_Activation_Pattern(self, movement_name):
+        """
+        Docstring for get_Activation_Pattern
         
+        :param movement_name: Name of movement
+        """
+        pass
     def MyoSuiteFormatter(data):
         """
         Converts data to MyoSuite compatible format
