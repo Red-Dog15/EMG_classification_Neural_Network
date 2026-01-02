@@ -5,6 +5,7 @@ this module provides mapping utilities for EMG data classification.
 """
 import numpy as np
 from numpy import array  # Needed for eval() to recognize array()
+from Data_Conversion import MOVEMENT_LABELS
 
 data_dir = "Output/NNO.txt"
 
@@ -49,7 +50,7 @@ def Get_Probable_Movements(data):
     
     for idx, prob in enumerate(movement_probs):
         if prob > 0.1:  # Threshold for probable movement (Above 10%)
-            probable_movements.append((idx, float(prob)))
+            probable_movements.append((MOVEMENT_LABELS[idx], float(prob)))
     
     return probable_movements
 
