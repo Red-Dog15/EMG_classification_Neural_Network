@@ -3,6 +3,8 @@ Docstring for Scripts.DATA.Data_Mapping
 
 this module provides mapping utilities for EMG data classification.
 """
+data_dir = "Output/NNO.txt"
+
 # Dict for myosuite movmenet applications
 def get_MyoSuite_Movement_LUT():
     """
@@ -25,8 +27,21 @@ def data_parser(file):
     with open(file, "r") as f:
         data = f.read()
         f.close()
-    print(data)
     return data
+def Get_Probable_Movements(data):
+    """
+    Docstring for Def_Get_Probable_Severities
+    
+    :param data: Model output probabilities
+    :return: List of probable movements
+    """
+    probable_movements = []
+    for item in data["Movement_Probabilities"]:
+        if item > 0.1:  # Threshold for probable movement (Above 10%)
+            probable_movements.append(item)
+    return probable_movements
+
+print(Get_Probable_Movements(data_parser(data_dir)))
 
 def Severity_Converter(severity_level, max_severity=5):
     """
@@ -40,12 +55,12 @@ def Severity_Converter(severity_level, max_severity=5):
         return severity_level / max_severity
     else:
         raise ValueError(f"Expected severity level must be between 0 and {max_severity}.")
-    
-def activation_blender(probability, weights):
+
+def activation_blender(probabilities, weights):
     """
     combines probability weightings into mutli-muscle movement pattern
     
-    :param : Descriptio
+    :param : probability: list of movement probabilities
     """
     pass
 
@@ -71,7 +86,8 @@ class Muscle_Mapping:
         :param movement_name: Name of movement
         """
         pass
-    def MyoSuiteFormatter(data):
+    
+    def MyoSuiteFormatter(self, data):
         """
         Converts data to MyoSuite compatible format
         
