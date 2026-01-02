@@ -41,3 +41,8 @@ ADVISOR_PRESENTATION.md
 
 # Test files
 test_predictions.py
+
+#output files
+.NN/
+.Output/
+NNO_Myo_S.txt*

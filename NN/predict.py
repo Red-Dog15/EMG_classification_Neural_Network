@@ -262,7 +262,7 @@ def save_prediction(results, file_out):
 # Example usage
 if __name__ == "__main__":
     # Example: Load model and make prediction
-    model_path = "./models/best_model_full.pth"
+    model_path = "./NN/models/best_model_full.pth"
     
     if os.path.exists(model_path):
         # Load model

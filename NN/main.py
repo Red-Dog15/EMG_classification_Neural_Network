@@ -6,7 +6,8 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import torch
 import torch.nn as nn
 from DATA.Data_Conversion import (
-    tensors_dict, 
+    load_all_datasets,
+    load_dataset,
     create_labeled_dataset, 
     get_num_classes,
     MOVEMENT_LABELS,
@@ -29,6 +30,7 @@ def main():
     
     # 1. Show available data
     print("\n--- Step 1: Data Overview ---")
+    tensors_dict = load_all_datasets()
     print(f"Available intensities: {list(tensors_dict.keys())}")
     print(f"Movements per intensity: {len(tensors_dict['Light'])}")
     print(f"\nMovement classes: {list(MOVEMENT_LABELS.values())}")
@@ -77,7 +79,7 @@ def main():
         
     # 4. Prediction demo
     print("\n--- Step 4: Prediction (Demo) ---")
-    model_path = "./models/final_model_full.pth"
+    model_path = "./NN/models/final_model_full.pth"
 
     from NN.network import save_output_sim # import output save function
     

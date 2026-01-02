@@ -167,7 +167,7 @@ def train_model(
     window_size=100,
     stride=50,
     train_split=0.8,
-    save_dir='./models',
+    save_dir='./NN/models',
     device=None
 ):
     """
