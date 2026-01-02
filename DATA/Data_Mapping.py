@@ -3,6 +3,9 @@ Docstring for Scripts.DATA.Data_Mapping
 
 this module provides mapping utilities for EMG data classification.
 """
+import numpy as np
+from numpy import array  # Needed for eval() to recognize array()
+
 data_dir = "Output/NNO.txt"
 
 # Dict for myosuite movmenet applications
@@ -20,27 +23,34 @@ def get_MyoSuite_Movement_LUT():
 # Mapping utilities for EMG data
 def data_parser(file):
     """
-    Docstring for parse_data
+    Parses NN output file and converts string to dictionary.
     
-    :param file: File for data parsing
+    :param file: File path for data parsing
+    :return: Parsed dictionary containing NN predictions
     """
     with open(file, "r") as f:
-        data = f.read()
+        data_str = f.read()
         f.close()
-    print (data)
-    return data
+    
+    # Convert string representation to actual dictionary
+    # eval() needs access to numpy types to parse the arrays in the string
+    data_dict = eval(data_str, {"array": np.array, "float32": np.float32})
+    return data_dict
 
 def Get_Probable_Movements(data):
     """
-    Docstring for Def_Get_Probable_Severities
+    Filters movements by probability threshold.
     
-    :param data: Model output probabilities
-    :return: List of probable movements
+    :param data: Model output dictionary with 'movement_probs' key
+    :return: List of probable movement indices and their probabilities
     """
     probable_movements = []
-    for item in data["Movement_Probabilities"]:
-        if item > 0.1:  # Threshold for probable movement (Above 10%)
-            probable_movements.append(item)
+    movement_probs = data["movement_probs"]  # Correct key name
+    
+    for idx, prob in enumerate(movement_probs):
+        if prob > 0.1:  # Threshold for probable movement (Above 10%)
+            probable_movements.append((idx, float(prob)))
+    
     return probable_movements
 
 print(Get_Probable_Movements(data_parser(data_dir)))
