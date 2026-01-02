@@ -27,7 +27,9 @@ def data_parser(file):
     with open(file, "r") as f:
         data = f.read()
         f.close()
+    print (data)
     return data
+
 def Get_Probable_Movements(data):
     """
     Docstring for Def_Get_Probable_Severities

@@ -39,10 +39,13 @@ python NN/main.py
 ## Files
 
 - `DATA/Data_Conversion.py` - Data loading and preprocessing
+- `DATA/Data_Mapping.py` - MyoSuite conversion utilities (NEW)
 - `DATA/dataset.py` - PyTorch dataset with sliding windows
 - `NN/network.py` - CNN-GRU model architecture
 - `NN/train.py` - Training script
 - `NN/predict.py` - Inference utilities
+- `NN/main.py` - Main prediction script
+- `Output/NNO.txt` - Neural network output storage
 - `METHODOLOGY.md` - Complete technical documentation
 
 ## Requirements
@@ -71,6 +74,34 @@ For deployment, the **final model** typically shows:
 - Smoother transitions between movements
 
 Use `final_model_full.pth` for real-time applications unless overfitting is observed.
+
+## MyoSuite Integration (In Progress)
+
+The system is being extended to interface with MyoSuite robotic simulation:
+
+**Output Data Structure**:
+```python
+{
+    'movement_pred': 6,                 # Hand_Open
+    'movement_name': 'Hand_Open',
+    'movement_probs': [0.0, 0.0, ..., 0.83],  # 7 movement probabilities
+    'movement_confidence': 0.828,
+    'severity_pred': 2,                 # Hard
+    'severity_name': 'Hard', 
+    'severity_probs': [0.0, 0.0, 1.0],  # 3 severity probabilities
+    'severity_confidence': 0.9999,
+    'num_windows': 59
+}
+```
+
+**Conversion Pipeline**:
+1. Parse NN output from `Output/NNO.txt`
+2. Map movements to muscle activation patterns
+3. Scale activations by severity/intensity
+4. Blend using probability weights for smooth control
+5. Format for MyoSuite muscle actuators
+
+See `DATA/Data_Mapping.py` for implementation details.
 
 ## Citation
 
