@@ -41,75 +41,88 @@ def data_parser(file):
 print(data_parser(data_dir))
 def Get_Probable_Movements(data):
     """
-    Filters movements by probability threshold.
+    Filters movements by probability threshold and includes severity information.
     
-    :param data: Model output dictionary with 'movement_probs' key
-    :return: List of probable movement indices and their probabilities
+    :param data: Model output dictionary with 'movement_probs' and 'severity_pred' keys
+    :return: List of tuples: (movement_name, probability, severity_level)
     """
     probable_movements = []
-    movement_probs = data["movement_probs"]  # Correct key name
+    movement_probs = data["movement_probs"]
+    severity = data["severity_pred"]  # Single severity value for all movements
     
     for idx, prob in enumerate(movement_probs):
         if prob > 0.1:  # Threshold for probable movement (Above 10%)
-            probable_movements.append((MOVEMENT_LABELS[idx], float(prob)))
+            probable_movements.append((MOVEMENT_LABELS[idx], float(prob), severity))
     return probable_movements
 
 print(f"Probable Movements: {Get_Probable_Movements(data_parser(data_dir))}")
 
-def get_Movement_Severity(data, weight = 0.5):
-    """
-    Identifies the most probable severity level from model output and weights with confidence.
-    
-    :param data: Model output dictionary with 'severity_pred' and 'severity_confidence' keys
-    :param weight: Weighting factor for confidence adjustment (default 0.5)
-    :return: Weighted severity level (float)
-    """
-    max_severity = data["severity_pred"]  # 0=Light, 1=Medium, 2=Hard
-    severity_confidence = data["severity_confidence"]
-    
-    # Return weighted severity (confidence-adjusted)
-    return max_severity * (severity_confidence * (1/weight))
 
-
-print(f"movement_severities: {get_Movement_Severity(data_parser(data_dir))}")
-severities = get_Movement_Severity(data_parser(data_dir))
-
-def Severity_Converter(severity_level, max_severity=5):
+def Severity_Converter(probable_movements, max_severity=5):
     """
     Converts Severity predictions into intensity multipliers for simulation/hardware.
+    Takes output from Get_Probable_Movements and replaces severity levels with scaled values.
     
-    :param severity_level: Severity level (int or float, or iterable of values)
+    :param probable_movements: List of tuples from Get_Probable_Movements: [(name, prob, severity), ...]
     :param max_severity: Maximum severity level, change depending on application (default=5)
-    :return: Generator yielding scaled severity values (float between 0 and 1)
+    :return: List of tuples with converted severities: [(name, prob, scaled_severity), ...]
     """
-    # Handle scalar input by converting to list
-    if not hasattr(severity_level, '__iter__'):
-        severity_level = [severity_level]
+    converted_movements = []
     
-    for severity in severity_level:
+    for movement_name, prob, severity in probable_movements:
         if 0 <= severity <= max_severity:
-            yield severity / max_severity
+            scaled_severity = severity / max_severity
+            converted_movements.append((movement_name, prob, scaled_severity))
         else:
             raise ValueError(f"Expected severity level must be between 0 and {max_severity}.")
-
-print(f"Converted_Severity: {list(Severity_Converter(severities))}")
-
-def activation_blender(probabilities: list[float], weights: list[float]):
-    """
-    Combines probability weightings into multi-muscle movement pattern.
     
-    :param probabilities: List of movement probabilities (floats 0-1)
-    :param weights: List of activation weights/patterns for each probability
-    :return: Generator yielding blended activation values
-    """
-    if len(probabilities) != len(weights):
-        raise ValueError(f"Probabilities ({len(probabilities)}) and weights ({len(weights)}) must have the same length")
-    
-    # Blend each probability with its corresponding weight
-    for prob, weight in zip(probabilities, weights):
-        blended_val = prob * weight
-        yield blended_val
+    return converted_movements
 
+# Test the converter with probable movements
+probable_movements = Get_Probable_Movements(data_parser(data_dir))
+converted_movements = Severity_Converter(probable_movements)
+print(f"Converted Movements: {converted_movements}")
+
+def activation_blender(converted_movements):
+    """
+    Combines probability weightings with severity into final activation values.
+    Uses probability as a weight applied to the severity multiplier.
+    
+    :param converted_movements: List of tuples from Severity_Converter: [(name, prob, scaled_severity), ...]
+    :return: List of tuples with blended activation: [(name, blended_activation), ...]
+    """
+    blended_results = []
+    
+    for movement_name, prob, scaled_severity in converted_movements:
+        # Blend: probability weighted by severity
+        blended_activation = prob * (1/scaled_severity)
+        blended_results.append((movement_name, blended_activation))    
+    return blended_results
+
+print(activation_blender(converted_movements))
+blended_activations = activation_blender(converted_movements)
+
+
+# Test activation blender with converted movements
+print(f"Blended Activations: {blended_activations}")
+"""
+# Example usage of activation_blender with probable movements
+data = data_parser(data_dir)
+probable_movements = Get_Probable_Movements(data)
+
+if probable_movements:
+    # Extract movement probabilities and convert their severities
+    movement_probs = [prob for _, prob, _ in probable_movements]
+    movement_severities = [severity for _, _, severity in probable_movements]
+    converted_severities = list(Severity_Converter(movement_severities))
+    
+    print(f"\nBlending {len(probable_movements)} probable movements:")
+    blended_activations = list(activation_blender(movement_probs, converted_severities))
+    print(f"Blended_Activations: {blended_activations}")
+    
+    for i, (name, prob, sev) in enumerate(probable_movements):
+        print(f"  {name}: prob={prob:.3f}, severity={sev}, blended={blended_activations[i]:.3f}")
+"""
 class Muscle_Mapping:
     # Movement Pattern Dictionary
     # for dynamic applications use 1 instance of this class
