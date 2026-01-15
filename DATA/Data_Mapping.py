@@ -35,9 +35,10 @@ def data_parser(file):
     
     # Convert string representation to actual dictionary
     # eval() needs access to numpy types to parse the arrays in the string
-    data_dict = eval(data_str, {"array": np.array, "float32": np.float32})
+    data_dict = eval(data_str, {"array": np.array, "float32": np.float32}) # add types as needed
     return data_dict
 
+print(data_parser(data_dir))
 def Get_Probable_Movements(data):
     """
     Filters movements by probability threshold.
@@ -51,31 +52,63 @@ def Get_Probable_Movements(data):
     for idx, prob in enumerate(movement_probs):
         if prob > 0.1:  # Threshold for probable movement (Above 10%)
             probable_movements.append((MOVEMENT_LABELS[idx], float(prob)))
-    
     return probable_movements
 
-print(Get_Probable_Movements(data_parser(data_dir)))
+print(f"Probable Movements: {Get_Probable_Movements(data_parser(data_dir))}")
+
+def get_Movement_Severity(data, weight = 0.5):
+    """
+    Identifies the most probable severity level from model output and weights with confidence.
+    
+    :param data: Model output dictionary with 'severity_pred' and 'severity_confidence' keys
+    :param weight: Weighting factor for confidence adjustment (default 0.5)
+    :return: Weighted severity level (float)
+    """
+    max_severity = data["severity_pred"]  # 0=Light, 1=Medium, 2=Hard
+    severity_confidence = data["severity_confidence"]
+    
+    # Return weighted severity (confidence-adjusted)
+    return max_severity * (severity_confidence * (1/weight))
+
+
+print(f"movement_severities: {get_Movement_Severity(data_parser(data_dir))}")
+severities = get_Movement_Severity(data_parser(data_dir))
 
 def Severity_Converter(severity_level, max_severity=5):
     """
-    Converts Severity predictions into intesity multipliers for simulation/hardware.
+    Converts Severity predictions into intensity multipliers for simulation/hardware.
     
-    :param severity_level: Severity level (int)
-    :param max_severity: Maximum severity level, change depending on application (int)
-    :return: Scaled severity (float)
+    :param severity_level: Severity level (int or float, or iterable of values)
+    :param max_severity: Maximum severity level, change depending on application (default=5)
+    :return: Generator yielding scaled severity values (float between 0 and 1)
     """
-    if 0 <= severity_level <= max_severity:
-        return severity_level / max_severity
-    else:
-        raise ValueError(f"Expected severity level must be between 0 and {max_severity}.")
+    # Handle scalar input by converting to list
+    if not hasattr(severity_level, '__iter__'):
+        severity_level = [severity_level]
+    
+    for severity in severity_level:
+        if 0 <= severity <= max_severity:
+            yield severity / max_severity
+        else:
+            raise ValueError(f"Expected severity level must be between 0 and {max_severity}.")
 
-def activation_blender(probabilities, weights):
+print(f"Converted_Severity: {list(Severity_Converter(severities))}")
+
+def activation_blender(probabilities: list[float], weights: list[float]):
     """
-    combines probability weightings into mutli-muscle movement pattern
+    Combines probability weightings into multi-muscle movement pattern.
     
-    :param : probability: list of movement probabilities
+    :param probabilities: List of movement probabilities (floats 0-1)
+    :param weights: List of activation weights/patterns for each probability
+    :return: Generator yielding blended activation values
     """
-    pass
+    if len(probabilities) != len(weights):
+        raise ValueError(f"Probabilities ({len(probabilities)}) and weights ({len(weights)}) must have the same length")
+    
+    # Blend each probability with its corresponding weight
+    for prob, weight in zip(probabilities, weights):
+        blended_val = prob * weight
+        yield blended_val
 
 class Muscle_Mapping:
     # Movement Pattern Dictionary
