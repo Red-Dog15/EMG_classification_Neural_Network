@@ -99,3 +99,71 @@ Defined transformation stages:
 - [ ] Test probability-weighted blending for smooth transitions
 - [ ] Integrate with MyoSuite simulation environment
 - [ ] Validate real-time control loop performance
+
+---
+
+## Update 3.0 - Refined Data Mapping Pipeline (January 15, 2026)
+
+### Achievements
+- ✓ Enhanced `Get_Probable_Movements()` to include severity information per movement
+- ✓ Refactored `Severity_Converter()` to work with movement tuples instead of raw values
+- ✓ Updated `activation_blender()` to combine probability and severity as weights
+- ✓ Created coherent data flow pipeline from NN output to activation values
+
+### Function Updates
+
+**`Get_Probable_Movements(data)`** - Enhanced Output Format
+- Now returns: `[(movement_name, probability, severity_level), ...]`
+- Example: `[('Chuck_Grip', 0.145, 2), ('Hand_Open', 0.828, 2)]`
+- Associates the predicted severity level with each probable movement
+- Filters movements with probability > 10% threshold
+
+**`Severity_Converter(probable_movements, max_severity=5)`** - Refactored
+- Input: List of tuples from `Get_Probable_Movements()`
+- Output: `[(movement_name, probability, scaled_severity), ...]`
+- Converts severity levels (0-2) to normalized intensity multipliers (0.0-1.0)
+- Example: severity=2 → scaled_severity=0.4 (with max_severity=5)
+- Preserves movement name and probability for downstream processing
+
+**`activation_blender(converted_movements)`** - Simplified Integration
+- Input: List of tuples from `Severity_Converter()`
+- Output: `[(movement_name, blended_activation), ...]`
+- Blends probability with severity: `blended_activation = probability / scaled_severity`
+- Uses inverse relationship: higher severity → lower multiplier needed
+- Example: prob=0.828 / severity=0.4 = 2.069 final activation
+- Provides weighted activation values for each probable movement
+
+### Data Flow Pipeline
+Complete transformation from NN prediction to activation values:
+
+```python
+# Step 1: Parse NN output
+data = data_parser("Output/NNO.txt")
+
+# Step 2: Extract probable movements with severity
+probable_movements = Get_Probable_Movements(data)
+# → [('Chuck_Grip', 0.145, 2), ('Hand_Open', 0.828, 2)]
+
+# Step 3: Convert severity levels to intensity multipliers
+converted_movements = Severity_Converter(probable_movements)
+# → [('Chuck_Grip', 0.145, 0.4), ('Hand_Open', 0.828, 0.4)]
+
+# Step 4: Blend probability and severity for final activation
+blended_activations = activation_blender(converted_movements)
+# → [('Chuck_Grip', 0.363), ('Hand_Open', 2.069)]
+```
+
+### Design Improvements
+- **Coherent data structure**: Tuple format maintained through pipeline stages
+- **Single-pass processing**: Each function adds value without redundant operations
+- **Traceable transformations**: Movement names preserved throughout pipeline
+- **Separation of concerns**: Distinct functions for filtering, scaling, and blending
+- **Inverse severity scaling**: Probability / Severity = Higher activation for stronger signals
+
+### Next Steps
+- [ ] Implement `Muscle_Mapping` class methods for pattern lookup
+- [ ] Define muscle activation patterns in `get_MyoSuite_Movement_LUT()`
+- [ ] Extend `activation_blender()` for multi-muscle pattern blending
+- [ ] Create `MyoSuiteFormatter()` for final output formatting
+- [ ] Test with multiple simultaneous movements
+- [ ] Validate smooth transitions between movement states

@@ -105,6 +105,7 @@ blended_activations = activation_blender(converted_movements)
 
 # Test activation blender with converted movements
 print(f"Blended Activations: {blended_activations}")
+
 """
 # Example usage of activation_blender with probable movements
 data = data_parser(data_dir)
