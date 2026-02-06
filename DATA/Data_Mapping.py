@@ -10,16 +10,22 @@ from Data_Conversion import MOVEMENT_LABELS
 data_dir = "Output/NNO.txt"
 
 # Dict for myosuite movmenet applications
-def get_MyoSuite_Movement_LUT():
+def get_MyoSuite_Movement_LUT(movement_name):
     """
     Returns a lookup table for MyoSuite movement patterns.
     
     :return: Dictionary mapping movement names to activation patterns
     """
-    return {
+    muscle_map_dict = {
+        "NO_Movement": [0.0] * 10,  # Default pattern for no movement
         "Hand_Open": [0.0, 0.8, ...],  # Example pattern
-        "Chuck_Grip": [0.9, 0.1, ...]   # Example pattern
+        "Chuck_Grip": [0.9, 0.1, ...],  # Example pattern
+        "Pinch_Grip": []    # Example pattern
+   
     }
+    return muscle_map_dict.get(movement_name, [0.0] * 10)  # Default to zero activation if not found
+
+print (f"get myosuite movement lut /n{get_MyoSuite_Movement_LUT('TEST')}")
 
 # Mapping utilities for EMG data
 def data_parser(file):
@@ -147,10 +153,7 @@ class Muscle_Mapping:
         """
         pass
     
-    def MyoSuiteFormatter(self, data):
-        """
-        Converts data to MyoSuite compatible format
+    def MyoSuiteFormatter(self, movement_name, blended_activation):
+        get_MyoSuite_Movement_LUT()
+
         
-        :param data: data to be formatted, Expects: (instert expected format)
-        """
-        pass

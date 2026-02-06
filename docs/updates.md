@@ -167,3 +167,58 @@ blended_activations = activation_blender(converted_movements)
 - [ ] Create `MyoSuiteFormatter()` for final output formatting
 - [ ] Test with multiple simultaneous movements
 - [ ] Validate smooth transitions between movement states
+Generating visualizations with NN predictions...
+
+Current Result Accuracy of an average of 
+Saved: DATA/Results/Light_No_Movement.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Light_Wrist_Flexion.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Light_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Light_Wrist_Pronation.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Light_Wrist_Supination.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Light_Chuck_Grip.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Light_Hand_Open.png - ✓ CORRECT
+Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Hard_No_Movement.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Hard_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Hard_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Hard_Wrist_Pronation.png - ✓ CORRECT
+Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Hard_No_Movement.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Hard_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Hard_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
+Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
+Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
+Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Hard_No_Movement.png - ⚠ Movement OK, Severity Wrong
+Saved: DATA/Results/Hard_Wrist_Flexion.png - ✓ CORRECT
+Saved: DATA/Results/Hard_Wrist_Extension.png - ✓ CORRECT
+Saved: DATA/Results/Hard_Wrist_Pronation.png - ✓ CORRECT
+Saved: DATA/Results/Hard_Wrist_Supination.png - ✗ INCORRECT
+Saved: DATA/Results/Hard_Chuck_Grip.png - ✗ INCORRECT
+Saved: DATA/Results/Hard_Hand_Open.png - ✓ CORRECT
