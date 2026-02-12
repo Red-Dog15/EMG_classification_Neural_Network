@@ -3,29 +3,88 @@ Docstring for Scripts.DATA.Data_Mapping
 
 this module provides mapping utilities for EMG data classification.
 """
+import json
+import os
 import numpy as np
 from numpy import array  # Needed for eval() to recognize array()
-from Data_Conversion import MOVEMENT_LABELS
+
+try:
+    from Data_Conversion import MOVEMENT_LABELS
+except Exception:
+    MOVEMENT_LABELS = []
 
 data_dir = "Output/NNO.txt"
+ACTUATOR_DUMP_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "Output", "actuators.json")
+)
 
-# Dict for myosuite movmenet applications
-def get_MyoSuite_Movement_LUT(movement_name):
+def _load_actuator_names(path=ACTUATOR_DUMP_PATH):
+    if not os.path.isfile(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return list(data.get("actuators", []))
+    except Exception:
+        return []
+
+
+def _activation_from_substrings(actuator_names, substrings, value=1.0):
+    activation = [0.0] * len(actuator_names)
+    if not substrings:
+        return activation
+    lower_subs = [s.lower() for s in substrings]
+    for i, name in enumerate(actuator_names):
+        name_l = name.lower()
+        if any(s in name_l for s in lower_subs):
+            activation[i] = float(value)
+    return activation
+
+
+# Dict for myosuite movement applications
+def get_MyoSuite_Movement_LUT(movement_name, action_size=None, actuator_names=None):
     """
     Returns a lookup table for MyoSuite movement patterns.
-    
-    :return: Dictionary mapping movement names to activation patterns
-    """
-    muscle_map_dict = {
-        "NO_Movement": [0.0] * 10,  # Default pattern for no movement
-        "Hand_Open": [0.0, 0.8, ...],  # Example pattern
-        "Chuck_Grip": [0.9, 0.1, ...],  # Example pattern
-        "Pinch_Grip": []    # Example pattern
-   
-    }
-    return muscle_map_dict.get(movement_name, [0.0] * 10)  # Default to zero activation if not found
 
-print (f"get myosuite movement lut /n{get_MyoSuite_Movement_LUT('TEST')}")
+    :param movement_name: Movement label
+    :param action_size: Optional action vector length
+    :param actuator_names: Optional actuator name list (from MyoSuite)
+    :return: Activation vector for the movement
+    """
+    if actuator_names is None:
+        actuator_names = _load_actuator_names()
+
+    if action_size is None:
+        action_size = len(actuator_names)
+
+    if action_size == 0:
+        raise ValueError(
+            "Action size is unknown. Run the simulator with MYOSUITE_DUMP_ACTUATORS=1 "
+            "to generate program/Output/actuators.json, then try again."
+        )
+
+    # Heuristic substring mapping for myoArm. Update to match your actuator list.
+    substrings_map = {
+        "Wrist_Flexion": ["fcr", "fcu", "pl"],
+        "Wrist_Extension": ["ecrl", "ecrb", "ecu"],
+        "Wrist_Pronation": ["pt", "pq"],
+        "Wrist_Supination": ["sup"],
+        "Chuck_Grip": ["fpl", "fdp", "fds", "op", "apb"],
+        "Hand_Open": ["edc", "edm", "eip", "epl", "epb", "apl"],
+    }
+
+    if movement_name == "No_Movement":
+        return [0.0] * action_size
+
+    if actuator_names:
+        activation = _activation_from_substrings(
+            actuator_names,
+            substrings_map.get(movement_name, []),
+        )
+    else:
+        activation = [0.0] * action_size
+
+    return activation
 
 # Mapping utilities for EMG data
 def data_parser(file):
@@ -44,7 +103,6 @@ def data_parser(file):
     data_dict = eval(data_str, {"array": np.array, "float32": np.float32}) # add types as needed
     return data_dict
 
-print(data_parser(data_dir))
 def Get_Probable_Movements(data):
     """
     Filters movements by probability threshold and includes severity information.
@@ -60,8 +118,6 @@ def Get_Probable_Movements(data):
         if prob > 0.1:  # Threshold for probable movement (Above 10%)
             probable_movements.append((MOVEMENT_LABELS[idx], float(prob), severity))
     return probable_movements
-
-print(f"Probable Movements: {Get_Probable_Movements(data_parser(data_dir))}")
 
 
 def Severity_Converter(probable_movements, max_severity=5):
@@ -84,11 +140,6 @@ def Severity_Converter(probable_movements, max_severity=5):
     
     return converted_movements
 
-# Test the converter with probable movements
-probable_movements = Get_Probable_Movements(data_parser(data_dir))
-converted_movements = Severity_Converter(probable_movements)
-print(f"Converted Movements: {converted_movements}")
-
 def activation_blender(converted_movements):
     """
     Combines probability weightings with severity into final activation values.
@@ -104,13 +155,6 @@ def activation_blender(converted_movements):
         blended_activation = prob * (1/scaled_severity)
         blended_results.append((movement_name, blended_activation))    
     return blended_results
-
-print(activation_blender(converted_movements))
-blended_activations = activation_blender(converted_movements)
-
-
-# Test activation blender with converted movements
-print(f"Blended Activations: {blended_activations}")
 
 """
 # Example usage of activation_blender with probable movements
@@ -156,4 +200,24 @@ class Muscle_Mapping:
     def MyoSuiteFormatter(self, movement_name, blended_activation):
         get_MyoSuite_Movement_LUT()
 
-        
+
+""" TESTS """
+
+if __name__ == "__main__":
+    data = data_parser(data_dir)
+    print(f"\nData parser Test: {data}\n")
+
+    probable_movements = Get_Probable_Movements(data)
+    print(f"\n Get Probable Movements Test: {probable_movements}\n ")
+
+    converted_movements = Severity_Converter(probable_movements)
+    print(f"\nConverted Movements: {converted_movements}\n")
+
+    blended_activations = activation_blender(converted_movements)
+    print(activation_blender(converted_movements))
+    print(f"\nBlended Activations: {blended_activations}\n")
+
+    if blended_activations:
+        print(
+            f"\nget myosuite movement TEST {get_MyoSuite_Movement_LUT(blended_activations[0][0])}\n"
+        )
