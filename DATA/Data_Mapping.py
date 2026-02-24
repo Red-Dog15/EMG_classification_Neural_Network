@@ -13,7 +13,7 @@ try:
 except Exception:
     MOVEMENT_LABELS = []
 
-data_dir = "Output/NNO.txt"
+data_dir = '"Output/NNO.csv"'
 ACTUATOR_DUMP_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "Output", "actuators.json")
 )
@@ -29,15 +29,23 @@ def _load_actuator_names(path=ACTUATOR_DUMP_PATH):
         return []
 
 
-def _activation_from_substrings(actuator_names, substrings, value=1.0):
+def _activation_from_substrings(actuator_names, substrings, value=1.0, debug=False):
     activation = [0.0] * len(actuator_names)
     if not substrings:
         return activation
     lower_subs = [s.lower() for s in substrings]
+    matched = []
     for i, name in enumerate(actuator_names):
         name_l = name.lower()
         if any(s in name_l for s in lower_subs):
             activation[i] = float(value)
+            matched.append(name)
+    if debug:
+        print(f"  Searching for substrings: {substrings}")
+        if matched:
+            print(f"  Matched actuators: {matched} (value={value})")
+        else:
+            print(f"  Matched actuators: NONE")
     return activation
 
 
@@ -64,22 +72,33 @@ def get_MyoSuite_Movement_LUT(movement_name, action_size=None, actuator_names=No
         )
 
     # Heuristic substring mapping for myoArm. Update to match your actuator list.
+    # Some movements use negative values to activate antagonistic muscles
     substrings_map = {
-        "Wrist_Flexion": ["fcr", "fcu", "pl"],
-        "Wrist_Extension": ["ecrl", "ecrb", "ecu"],
-        "Wrist_Pronation": ["pt", "pq"],
-        "Wrist_Supination": ["sup"],
-        "Chuck_Grip": ["fpl", "fdp", "fds", "op", "apb"],
-        "Hand_Open": ["edc", "edm", "eip", "epl", "epb", "apl"],
+        "Wrist_Flexion": (["cmc_flexion", "flexion"], 1.0),
+        "Wrist_Extension": (["cmc_flexion", "flexion"], -1.0),  # Opposite of flexion
+        "Wrist_Pronation": (["sup"], -1.0),  # Opposite of supination
+        "Wrist_Supination": (["sup"], 1.0),
+        "Chuck_Grip": (["firstmc", "mc", "grip"], 1.0),
+        "Hand_Open": (["firstmc", "mc"], -1.0),  # Opposite of grip
     }
 
     if movement_name == "No_Movement":
         return [0.0] * action_size
 
     if actuator_names:
+        # Enable debug to see what's being matched
+        debug_mode = os.getenv("DEBUG_MAPPING", "0") == "1"
+        if debug_mode:
+            print(f"\nDEBUG: Movement = {movement_name}")
+            print(f"  Available actuators: {actuator_names}")
+        
+        mapping = substrings_map.get(movement_name, ([], 1.0))
+        substrings, value = mapping
         activation = _activation_from_substrings(
             actuator_names,
-            substrings_map.get(movement_name, []),
+            substrings,
+            value=value,
+            debug=debug_mode
         )
     else:
         activation = [0.0] * action_size

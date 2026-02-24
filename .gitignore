@@ -42,7 +42,11 @@ ADVISOR_PRESENTATION.md
 # Test files
 test_predictions.py
 
+# Diagnostic files
+diagnose_actuators.py
+
 #output files
 .NN/
 .Output/
 NNO_Myo_S.txt*
+

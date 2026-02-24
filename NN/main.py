@@ -17,7 +17,7 @@ from DATA.dataset import get_dataset_statistics
 from NN.train import train_model
 from NN.predict import load_trained_model, predict_from_csv, print_prediction
 
-results_file = "./Output/NNO.txt"
+results_file = "./Output/NNO.csv" # Output file for predictions (can be changed as needed)
 
 def main():
     """
