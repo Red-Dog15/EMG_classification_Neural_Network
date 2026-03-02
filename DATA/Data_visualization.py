@@ -1,6 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import os
 import sys
@@ -18,19 +19,38 @@ SAMPLING_RATE_HZ = 1000  # 1 kHz sampling frequency
 TIME_PER_SAMPLE_MS = 1000 / SAMPLING_RATE_HZ  # 1.0 ms per sample
 TIME_PER_SAMPLE_S = 1 / SAMPLING_RATE_HZ  # 0.001 s per sample
 
-# Analytics tracking
-analytics_data = {
-    "metadata": {
-        "timestamp": datetime.now().isoformat(),
-        "model_path": "NN/models/best_model_full.pth",
-        "sampling_rate_hz": SAMPLING_RATE_HZ,
-        "window_size": 100
+# ============================================================================
+# MODEL REGISTRY - Configure available NN architectures
+# Each NN architecture (A/B/C) represents a different neural network design
+# They can use either "best" or "final" trained model checkpoints
+# ============================================================================
+MODEL_REGISTRY = {
+    "NN-A": {
+        "name": "NN-A (Current Architecture)",
+        "path_best": "Scripts/NN/models/best_model_full.pth",
+        "path_final": "Scripts/NN/models/final_model_full.pth",
+        "description": "Current neural network architecture with best/final checkpoints",
+        "available": True
     },
-    "predictions": [],
-    "movement_stats": {i: {"correct": 0, "total": 0} for i in range(7)},
-    "severity_stats": {i: {"correct": 0, "total": 0} for i in range(3)},
-    "combined_stats": {"correct": 0, "total": 0}
+    "NN-B": {
+        "name": "NN-B (Placeholder - Future)",
+        "path_best": "Scripts/NN/models/B_best_model_full.pth",
+        "path_final": "Scripts/NN/models/B_final_model_full.pth",
+        "description": "Reserved for future NN architecture variant B",
+        "available": False  # Not yet implemented
+    },
+    "NN-C": {
+        "name": "NN-C (Placeholder - Future)",
+        "path_best": "Scripts/NN/models/C_best_model_full.pth",
+        "path_final": "Scripts/NN/models/C_final_model_full.pth",
+        "description": "Reserved for future NN architecture variant C (e.g., CNN+RNN)",
+        "available": False  # Not yet implemented
+    }
 }
+
+# Global state for analytics tracking
+analytics_data = {}
+current_model_info = {}
 
 def samples_to_time_ms(samples):
     """Convert sample indices to time in milliseconds."""
@@ -40,11 +60,97 @@ def samples_to_time_s(samples):
     """Convert sample indices to time in seconds."""
     return samples * TIME_PER_SAMPLE_S
 
-# Load the trained model once
-MODEL_PATH = "NN/models/best_model_full.pth"
-model, _ = load_trained_model(MODEL_PATH)
-print(f"Model loaded from {MODEL_PATH}")
-print(f"Time Conversion: {SAMPLING_RATE_HZ} Hz → {TIME_PER_SAMPLE_MS} ms/sample")
+# ============================================================================
+# MODEL AND ANALYTICS INITIALIZATION
+# ============================================================================
+
+def initialize_analytics_data(model_path):
+    """Initialize analytics data structure for a given model."""
+    return {
+        "metadata": {
+            "timestamp": datetime.now().isoformat(),
+            "model_path": model_path,
+            "sampling_rate_hz": SAMPLING_RATE_HZ,
+            "window_size": 100
+        },
+        "predictions": [],
+        "movement_stats": {i: {"correct": 0, "total": 0} for i in range(7)},
+        "severity_stats": {i: {"correct": 0, "total": 0} for i in range(3)},
+        "combined_stats": {"correct": 0, "total": 0}
+    }
+
+def select_model():
+    """Display available NN architectures and let user select one with checkpoint type."""
+    print("\n" + "="*80)
+    print("AVAILABLE NEURAL NETWORK ARCHITECTURES")
+    print("="*80)
+    
+    models = list(MODEL_REGISTRY.keys())
+    available_models = [k for k in models if MODEL_REGISTRY[k]["available"]]
+    
+    for i, key in enumerate(models, 1):
+        model = MODEL_REGISTRY[key]
+        status = "✓ Available" if model["available"] else "⚠ Not Implemented"
+        print(f"{i}. {model['name']:35} [{status}]")
+        print(f"   {model['description']}")
+    
+    print("\n" + "-"*80)
+    
+    # Select architecture
+    if len(available_models) == 0:
+        print("⚠ No models available!")
+        return None, None
+    
+    choice = input(f"Select NN architecture (1-{len(models)}) or press Enter for NN-A: ").strip()
+    
+    if choice == "" or choice == "1":
+        selected_key = models[0]
+    elif choice.isdigit() and 1 <= int(choice) <= len(models):
+        selected_key = models[int(choice) - 1]
+    else:
+        print(f"Invalid choice. Using NN-A.")
+        selected_key = models[0]
+    
+    model_info = MODEL_REGISTRY[selected_key]
+    
+    if not model_info["available"]:
+        print(f"\n⚠ {model_info['name']} is not yet implemented!")
+        print("   Please select an available model or implement this architecture first.")
+        return None, None
+    
+    # Select checkpoint type
+    print("\n" + "-"*80)
+    print("Select trained checkpoint:")
+    print("1. Best model (best validation performance)")
+    print("2. Final model (final training epoch)")
+    
+    checkpoint_choice = input("\nSelect checkpoint (1-2) or press Enter for best: ").strip()
+    
+    if checkpoint_choice == "2":
+        model_path = model_info["path_final"]
+        checkpoint_type = "final"
+    else:
+        model_path = model_info["path_best"]
+        checkpoint_type = "best"
+    
+    if not os.path.exists(model_path):
+        print(f"\n⚠ Warning: Model file not found at {model_path}")
+        print("   The script will fail if this model is needed for prediction.")
+        return None, None
+    
+    print(f"\n✓ Selected: {model_info['name']} ({checkpoint_type} checkpoint)")
+    print(f"  Path: {model_path}")
+    
+    # Create model info dict with selected path
+    selected_model_info = {
+        "name": model_info["name"],
+        "path": model_path,
+        "architecture": selected_key,
+        "checkpoint": checkpoint_type,
+        "description": model_info["description"]
+    }
+    
+    return selected_key, selected_model_info
 
 def plot_raw_window(window, true_movement_idx, true_severity_idx, file_name):
     """
@@ -84,8 +190,8 @@ def plot_raw_window(window, true_movement_idx, true_severity_idx, file_name):
     plt.tight_layout()
     
     # Save to raw data folder
-    plt.savefig(f"DATA/Results/Raw_Data/{file_name}.png", dpi=300, bbox_inches="tight")
-    print(f"Saved Raw: DATA/Results/Raw_Data/{file_name}.png")
+    plt.savefig(f"Scripts/DATA/Results/Raw_Data/{file_name}.png", dpi=300, bbox_inches="tight")
+    print(f"Saved Raw: Scripts/DATA/Results/Raw_Data/{file_name}.png")
     plt.close()
 
 def plot_window_with_prediction(window, true_movement_idx, true_severity_idx, file_name, window_size=100):
@@ -206,8 +312,8 @@ def plot_window_with_prediction(window, true_movement_idx, true_severity_idx, fi
     plt.tight_layout()
     
     # Save to predicted data folder
-    plt.savefig(f"DATA/Results/Predicted_Data/{file_name}.png", dpi=300, bbox_inches="tight")
-    print(f"Saved Predicted: DATA/Results/Predicted_Data/{file_name}.png - {status}")
+    plt.savefig(f"Scripts/DATA/Results/Predicted_Data/{file_name}.png", dpi=300, bbox_inches="tight")
+    print(f"Saved Predicted: Scripts/DATA/Results/Predicted_Data/{file_name}.png - {status}")
     plt.close()
 
 def generate_raw_plots(tensors, window_samples=200):
@@ -216,7 +322,7 @@ def generate_raw_plots(tensors, window_samples=200):
     print("GENERATING RAW EMG PLOTS")
     print("="*80)
     
-    os.makedirs("DATA/Results/Raw_Data", exist_ok=True)
+    os.makedirs("Scripts/DATA/Results/Raw_Data", exist_ok=True)
     
     for severity_name, severity_idx in [("Light", 0), ("Medium", 1), ("Hard", 2)]:
         for movement_idx in range(7):
@@ -231,7 +337,7 @@ def generate_raw_plots(tensors, window_samples=200):
                 file_name=f"{severity_name}_{MOVEMENT_LABELS[movement_idx]}"
             )
     
-    print(f"\n✅ Raw plots saved to: DATA/Results/Raw_Data/")
+    print(f"\n✅ Raw plots saved to: Scripts/DATA/Results/Raw_Data/")
 
 def generate_predicted_plots(tensors, window_samples=200):
     """Generate EMG plots with NN predictions overlaid."""
@@ -239,7 +345,7 @@ def generate_predicted_plots(tensors, window_samples=200):
     print("GENERATING PREDICTED EMG PLOTS")
     print("="*80)
     
-    os.makedirs("DATA/Results/Predicted_Data", exist_ok=True)
+    os.makedirs("Scripts/DATA/Results/Predicted_Data", exist_ok=True)
     
     for severity_name, severity_idx in [("Light", 0), ("Medium", 1), ("Hard", 2)]:
         for movement_idx in range(7):
@@ -254,7 +360,7 @@ def generate_predicted_plots(tensors, window_samples=200):
                 file_name=f"{severity_name}_{MOVEMENT_LABELS[movement_idx]}"
             )
     
-    print(f"\n✅ Predicted plots saved to: DATA/Results/Predicted_Data/")
+    print(f"\n✅ Predicted plots saved to: Scripts/DATA/Results/Predicted_Data/")
 
 def generate_analytics_report():
     """Generate analytics report from collected prediction data."""
@@ -262,7 +368,7 @@ def generate_analytics_report():
     print("GENERATING ANALYTICS REPORT")
     print("="*80)
     
-    os.makedirs("DATA/Results", exist_ok=True)
+    os.makedirs("Scripts/DATA/Results", exist_ok=True)
     
     # Calculate overall accuracies
     movement_accuracy = analytics_data["movement_stats"]
@@ -341,12 +447,12 @@ def generate_analytics_report():
     }
     
     # Save to JSON
-    analytics_file = "DATA/Results/analytics_report.json"
+    analytics_file = "Scripts/DATA/Results/analytics_report.json"
     with open(analytics_file, "w") as f:
         json.dump(analytics_report, f, indent=2)
     
     # Save human-readable summary
-    summary_file = "DATA/Results/analytics_summary.txt"
+    summary_file = "Scripts/DATA/Results/analytics_summary.txt"
     with open(summary_file, "w", encoding='utf-8') as f:
         f.write("="*80 + "\n")
         f.write("EMG CLASSIFICATION ANALYTICS REPORT\n")
@@ -419,6 +525,146 @@ def generate_analytics_report():
     
     print("="*80)
 
+def generate_model_heatmap():
+    """
+    Generate a heatmap showing accuracy of different models across movement classifications.
+    This allows comparison of multiple NN architectures.
+    """
+    print("\n" + "="*80)
+    print("GENERATING MODEL COMPARISON HEATMAP")
+    print("="*80)
+    
+    os.makedirs("Scripts/DATA/Results", exist_ok=True)
+    
+    # Collect accuracy data for each model
+    model_accuracy_data = {}
+    movement_names = [MOVEMENT_LABELS[i] for i in range(7)]
+    
+    print(f"\nTesting {len(MODEL_REGISTRY)} NN architectures...")
+    
+    for model_key, model_config in MODEL_REGISTRY.items():
+        if not model_config["available"]:
+            print(f"\n  ⊘ Skipping {model_config['name']}: Not yet implemented")
+            continue
+        
+        model_path = model_config["path_best"]  # Use best checkpoint for comparison
+        model_name = model_config["name"]
+        
+        if not os.path.exists(model_path):
+            print(f"\n⚠ Skipping {model_name}: Model file not found at {model_path}")
+            continue
+        
+        print(f"\n  • Processing: {model_name}")
+        
+        try:
+            # Load model
+            model, _ = load_trained_model(model_path)
+            
+            # Initialize analytics for this model
+            model_analytics = initialize_analytics_data(model_path)
+            
+            # Test on all datasets
+            tensors = DC.load_all_datasets()
+            
+            for severity_name, severity_idx in [("Light", 0), ("Medium", 1), ("Hard", 2)]:
+                for movement_idx in range(7):
+                    tensor_data = tensors[severity_name][movement_idx]
+                    start_idx = len(tensor_data) // 2
+                    window = tensor_data[start_idx:start_idx + 200]
+                    
+                    # Get prediction
+                    prediction = predict_from_tensor(model, window, window_size=100)
+                    
+                    # Update stats
+                    movement_correct = prediction['movement_pred'] == movement_idx
+                    severity_correct = prediction['severity_pred'] == severity_idx
+                    
+                    model_analytics["movement_stats"][movement_idx]["total"] += 1
+                    if movement_correct:
+                        model_analytics["movement_stats"][movement_idx]["correct"] += 1
+            
+            # Calculate accuracies for each movement
+            movement_accuracies = []
+            for idx in range(7):
+                stats = model_analytics["movement_stats"][idx]
+                if stats["total"] > 0:
+                    accuracy = (stats["correct"] / stats["total"]) * 100
+                else:
+                    accuracy = 0
+                movement_accuracies.append(accuracy)
+            
+            model_accuracy_data[model_name] = movement_accuracies
+            
+            print(f"     ✓ Accuracy: {np.mean(movement_accuracies):.1f}%")
+            
+        except Exception as e:
+            print(f"     ✗ Error processing model: {str(e)}")
+            continue
+    
+    if not model_accuracy_data:
+        print("\n⚠ No valid models found for heatmap generation!")
+        return
+    
+    # Create heatmap
+    print("\n  Creating visualization...")
+    
+    model_names = list(model_accuracy_data.keys())
+    accuracies = np.array(list(model_accuracy_data.values()))
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    # Create heatmap
+    im = ax.imshow(accuracies, cmap='RdYlGn', aspect='auto', vmin=50, vmax=100)
+    
+    # Set ticks and labels
+    ax.set_xticks(np.arange(7))
+    ax.set_yticks(np.arange(len(model_names)))
+    ax.set_xticklabels([MOVEMENT_LABELS[i] for i in range(7)], rotation=45, ha='right')
+    ax.set_yticklabels(model_names)
+    
+    # Add accuracy values as text annotations
+    for i in range(len(model_names)):
+        for j in range(7):
+            value = accuracies[i, j]
+            color = 'white' if value < 75 else 'black'
+            text = ax.text(j, i, f'{value:.1f}', ha='center', va='center',
+                          color=color, fontweight='bold', fontsize=11)
+    
+    # Labels and title
+    ax.set_xlabel('Movement Classifications', fontweight='bold', fontsize=12)
+    ax.set_ylabel('Models', fontweight='bold', fontsize=12)
+    ax.set_title('Model Performance Heatmap - Accuracy Across Movement Classifications (%)',
+                fontweight='bold', fontsize=14, pad=20)
+    
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax, label='Accuracy (%)')
+    
+    plt.tight_layout()
+    
+    # Save figure
+    heatmap_file = "Scripts/DATA/Results/model_performance_heatmap.png"
+    plt.savefig(heatmap_file, dpi=300, bbox_inches="tight")
+    print(f"\n✅ Heatmap saved to: {heatmap_file}")
+    
+    # Save data as JSON
+    heatmap_data = {
+        "timestamp": datetime.now().isoformat(),
+        "models": model_names,
+        "movements": [MOVEMENT_LABELS[i] for i in range(7)],
+        "accuracy_matrix": accuracies.tolist(),
+        "average_per_model": [float(np.mean(row)) for row in accuracies]
+    }
+    
+    json_file = "Scripts/DATA/Results/model_heatmap_data.json"
+    with open(json_file, "w") as f:
+        json.dump(heatmap_data, f, indent=2)
+    
+    print(f"✅ Heatmap data saved to: {json_file}")
+    
+    plt.close()
+
+    print("="*80)
+
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
@@ -428,41 +674,66 @@ if __name__ == "__main__":
     print("EMG DATA VISUALIZATION & ANALYTICS TOOL")
     print("="*80)
     
-    # User prompts for what to generate
+    # Step 1: Select Model
+    model_key, model_info = select_model()
+    
+    if model_info is None:
+        print("\n❌ No valid model selected. Exiting.")
+        exit(1)
+    
+    model, _ = load_trained_model(model_info["path"])
+    
+    # Initialize analytics data with selected model
+    analytics_data = initialize_analytics_data(model_info["path"])
+    
+    print(f"\nTime Conversion: {SAMPLING_RATE_HZ} Hz → {TIME_PER_SAMPLE_MS} ms/sample")
+    
+    # Step 2: Select Generation Mode
+    print("\n" + "="*80)
+    print("DATA GENERATION MODES")
+    print("="*80)
     print("\nWhat would you like to generate?")
     print("1. Raw EMG plots (without predictions)")
     print("2. Predicted EMG plots (with NN predictions)")
-    print("3. Analytics report")
-    print("4. All of the above")
+    print("3. Analytics report (requires predicted plots)")
+    print("4. Model comparison heatmap (tests all available models)")
+    print("5. Full pipeline (all of the above in sequence)")
+    print("6. Analytics + Heatmap (skip raw/predicted plots)")
     
-    choice = input("\nEnter your choice (1-4) or press Enter for all: ").strip()
+    choice = input("\nEnter your choice (1-6) or press Enter for full pipeline: ").strip()
     
-    if choice == "":
-        choice = "4"
+    if choice == "" or choice == "5":
+        choice = "5"
     
-    generate_raw = choice in ["1", "4"]
-    generate_predicted = choice in ["2", "4"]
-    generate_analytics = choice in ["3", "4"]
+    generate_raw = choice in ["1", "5"]
+    generate_predicted = choice in ["2", "5"]
+    generate_analytics = choice in ["3", "5", "6"]
+    generate_heatmap = choice in ["4", "5", "6"]
     
-    # Load datasets once
-    print("\nLoading datasets...")
-    tensors = DC.load_all_datasets()
+    # Load datasets if needed for single model analysis
+    if generate_raw or generate_predicted or generate_analytics:
+        print("\nLoading datasets...")
+        tensors = DC.load_all_datasets()
+        
+        # Window size configuration
+        window_samples = 200
+        
+        # Generate requested outputs
+        if generate_raw:
+            generate_raw_plots(tensors, window_samples)
+        
+        if generate_predicted:
+            generate_predicted_plots(tensors, window_samples)
+        
+        if generate_analytics and len(analytics_data["predictions"]) > 0:
+            generate_analytics_report()
+        elif generate_analytics:
+            print("\n⚠ Warning: Analytics require predicted plots to be generated first!")
+            print("   Run option 2 or 5 to generate analytics.")
     
-    # Window size configuration
-    window_samples = 200
-    
-    # Generate requested outputs
-    if generate_raw:
-        generate_raw_plots(tensors, window_samples)
-    
-    if generate_predicted:
-        generate_predicted_plots(tensors, window_samples)
-    
-    if generate_analytics and len(analytics_data["predictions"]) > 0:
-        generate_analytics_report()
-    elif generate_analytics:
-        print("\n⚠ Warning: Analytics require predicted plots to be generated first!")
-        print("   Run option 2 or 4 to generate analytics.")
+    # Generate heatmap (tests all models, independent of above)
+    if generate_heatmap:
+        generate_model_heatmap()
     
     print("\n" + "="*80)
     print("COMPLETE!")
@@ -474,9 +745,13 @@ if __name__ == "__main__":
     print(f"   Formula: Time (s) = Sample_Index × {TIME_PER_SAMPLE_S}")
     print(f"\n📁 Output Folders:")
     if generate_raw:
-        print(f"   Raw Data: DATA/Results/Raw_Data/")
+        print(f"   Raw Data: Scripts/DATA/Results/Raw_Data/")
     if generate_predicted:
-        print(f"   Predicted Data: DATA/Results/Predicted_Data/")
+        print(f"   Predicted Data: Scripts/DATA/Results/Predicted_Data/")
     if generate_analytics:
-        print(f"   Analytics: DATA/Results/")
+        print(f"   Analytics: Scripts/DATA/Results/analytics_report.json")
+        print(f"   Analytics: Scripts/DATA/Results/analytics_summary.txt")
+    if generate_heatmap:
+        print(f"   Heatmap: Scripts/DATA/Results/model_performance_heatmap.png")
+        print(f"   Heatmap Data: Scripts/DATA/Results/model_heatmap_data.json")
     print("="*80)
