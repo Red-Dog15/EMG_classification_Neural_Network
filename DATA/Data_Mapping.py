@@ -71,16 +71,32 @@ def get_MyoSuite_Movement_LUT(movement_name, action_size=None, actuator_names=No
             "to generate program/Output/actuators.json, then try again."
         )
 
-    # Heuristic substring mapping for myoArm. Update to match your actuator list.
-    # Some movements use negative values to activate antagonistic muscles
-    substrings_map = {
-        "Wrist_Flexion": (["cmc_flexion", "flexion"], 1.0),
-        "Wrist_Extension": (["cmc_flexion", "flexion"], -1.0),  # Opposite of flexion
-        "Wrist_Pronation": (["sup"], -1.0),  # Opposite of supination
-        "Wrist_Supination": (["sup"], 1.0),
-        "Chuck_Grip": (["firstmc", "mc", "grip"], 1.0),
-        "Hand_Open": (["firstmc", "mc"], -1.0),  # Opposite of grip
-    }
+    # Detect environment type based on actuator names
+    is_hand_env = any(
+        name.lower() and ("wristflexor" in name.lower() or "edc" in name.lower() or "proximal_thumb" in name.lower())
+        for name in actuator_names
+    )
+    
+    if is_hand_env:
+        # MyoHand environment mappings
+        substrings_map = {
+            "Wrist_Flexion": (["wristflexor"], 1.0),
+            "Wrist_Extension": (["edc"], 1.0),  # Extensor Digitorum Communis
+            "Wrist_Pronation": (["pt"], 1.0),  # Pronator Teres (may not exist)
+            "Wrist_Supination": (["sup"], 1.0),  # Supinator (may not exist)
+            "Chuck_Grip": (["proximal_thumb", "mcp5_flexion"], 1.0),
+            "Hand_Open": (["edc", "2proxph"], 1.0),  # Extensors
+        }
+    else:
+        # MyoArm environment mappings
+        substrings_map = {
+            "Wrist_Flexion": (["cmc_flexion"], 1.0),
+            "Wrist_Extension": (["trilong"], 1.0),  # Triceps tendon
+            "Wrist_Pronation": (["pecm"], 1.0),  # Pectoralis
+            "Wrist_Supination": (["sup"], 1.0),
+            "Chuck_Grip": (["firstmc", "cmc_flexion"], 1.0),
+            "Hand_Open": (["delt"], 1.0),  # Deltoid
+        }
 
     if movement_name == "No_Movement":
         return [0.0] * action_size
@@ -89,7 +105,8 @@ def get_MyoSuite_Movement_LUT(movement_name, action_size=None, actuator_names=No
         # Enable debug to see what's being matched
         debug_mode = os.getenv("DEBUG_MAPPING", "0") == "1"
         if debug_mode:
-            print(f"\nDEBUG: Movement = {movement_name}")
+            env_type = "myoHand" if is_hand_env else "myoArm"
+            print(f"\nDEBUG: Movement = {movement_name} [Environment: {env_type}]")
             print(f"  Available actuators: {actuator_names}")
         
         mapping = substrings_map.get(movement_name, ([], 1.0))
