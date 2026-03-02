@@ -534,7 +534,7 @@ def generate_model_heatmap():
     print("GENERATING MODEL COMPARISON HEATMAP")
     print("="*80)
     
-    os.makedirs("Scripts/DATA/Results", exist_ok=True)
+    os.makedirs("Scripts/DATA/Results/Heatmaps", exist_ok=True)
     
     # Collect accuracy data for each model
     model_accuracy_data = {}
@@ -642,7 +642,7 @@ def generate_model_heatmap():
     plt.tight_layout()
     
     # Save figure
-    heatmap_file = "Scripts/DATA/Results/model_performance_heatmap.png"
+    heatmap_file = "Scripts/DATA/Results/Heatmaps/model_performance_heatmap.png"
     plt.savefig(heatmap_file, dpi=300, bbox_inches="tight")
     print(f"\n✅ Heatmap saved to: {heatmap_file}")
     
@@ -655,7 +655,7 @@ def generate_model_heatmap():
         "average_per_model": [float(np.mean(row)) for row in accuracies]
     }
     
-    json_file = "Scripts/DATA/Results/model_heatmap_data.json"
+    json_file = "Scripts/DATA/Results/Heatmaps/model_heatmap_data.json"
     with open(json_file, "w") as f:
         json.dump(heatmap_data, f, indent=2)
     
@@ -752,6 +752,5 @@ if __name__ == "__main__":
         print(f"   Analytics: Scripts/DATA/Results/analytics_report.json")
         print(f"   Analytics: Scripts/DATA/Results/analytics_summary.txt")
     if generate_heatmap:
-        print(f"   Heatmap: Scripts/DATA/Results/model_performance_heatmap.png")
-        print(f"   Heatmap Data: Scripts/DATA/Results/model_heatmap_data.json")
+        print(f"   Heatmaps: Scripts/DATA/Results/Heatmaps/")
     print("="*80)
