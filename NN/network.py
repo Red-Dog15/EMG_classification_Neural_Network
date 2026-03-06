@@ -157,6 +157,117 @@ class LightweightEMG_Model(nn.Module):
         
         return movement_logits, severity_logits
 
+class EMG_Standard_CNN(nn.Module):
+    """
+    Multi-task model for EMG classification.
+    Predicts both movement type and contraction severity.
+    """
+    
+    """ replication of CNN architecture from Xiong, D., Zhang, D., Zhao, X., & Zhao, Y. (2021). 
+    Deep Learning for EMG-based Human-Machine Interaction: A Review. IEEE/CAA Journal of Automatica Sinica, 8(3), 512–533. https://doi.org/10.1109/JAS.2021.1003865
+    """
+    
+    def __init__(self, num_channels=8, num_movements=7, num_severities=3, 
+                 hidden_size=64, dropout=0.3):
+        """
+        Args:
+            num_channels: Number of EMG channels (default 8)
+            num_movements: Number of movement classes (default 7)
+            num_severities: Number of severity levels (default 3)
+            hidden_size: Size of hidden layers
+            dropout: Dropout probability for regularization
+        """
+        super(EMG_Standard_CNN, self).__init__()
+        
+        self.num_channels = num_channels
+        self.num_movements = num_movements
+        self.num_severities = num_severities
+        
+        # ---- CNN Feature Extractor ----
+        # Input: (batch, seq_len, channels)
+        self.conv1 = nn.Conv1d(num_channels, 32, kernel_size=5, padding=2) # first CNN layer, Kernal size 5 looks at 5 consecutive time samples
+        self.bn1 = nn.BatchNorm1d(32) # normalize data
+        self.conv2 = nn.Conv1d(32, 64, kernel_size=3, padding=1) # second CNN layer, padding  adds x zeroes to each end of the input
+        self.bn2 = nn.BatchNorm1d(64) 
+        self.pool = nn.MaxPool1d(kernel_size=2) # take maximum value from every (kernal_size) consecutive samples for computational efficiency
+        
+        # ---- Temporal Feature Extraction (GRU) ----
+        self.gru = nn.GRU( # Gated Recurrent Unit layer for sequential data
+            input_size=64, # each time step has 64 features from CNN
+            hidden_size=hidden_size, # size of GRU hidden state
+            num_layers=2, # number of stacked GRU layers
+            batch_first=True,  # expects input as (batch, seq_len, features)
+            dropout=dropout if dropout > 0 else 0, # probability of an element to be zeroed
+            bidirectional=True # use both forward and backward GRU
+        )
+        
+        """
+        GRU Functionality: 
+        - Captures temporal dependencies in sequential EMG data
+        - Bidirectional GRU processes data in both time directions
+        """
+        
+        # ---- Shared Feature Layer ----
+        self.shared_fc = nn.Linear(hidden_size * 2, 128)  # *2 for bidirectional
+        self.dropout = nn.Dropout(dropout) # randomly sets 30% of neurons to 0 to prevent overfitting in training
+        
+        # ---- Task-Specific Output Heads ----
+        # Movement classification head
+        self.movement_head = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, num_movements)
+        )
+        
+        # Severity classification head
+        self.severity_head = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(64, num_severities)
+        )
+        
+    def forward(self, x):
+        """
+        Forward pass.
+        
+        Args:
+            x: Input tensor (batch_size, seq_len, num_channels)
+            
+        Returns:
+            movement_logits: (batch_size, num_movements)
+            severity_logits: (batch_size, num_severities)
+        """
+        batch_size = x.size(0)
+        
+        # Transpose for Conv1d: (batch, channels, seq_len)
+        x = x.transpose(1, 2)
+        
+        # CNN layers
+        x = F.relu(self.bn1(self.conv1(x))) # implement and normalize first conv layer
+        x = self.pool(x) #implement pool layer
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.pool(x)
+        
+        # Transpose back for GRU: (batch, seq_len, features)
+        x = x.transpose(1, 2)
+        
+        # GRU layers
+        gru_out, _ = self.gru(x)  # (batch, seq_len, hidden_size*2)
+        
+        # Take last timestep output 
+        last_out = gru_out[:, -1, :]  # (batch, hidden_size*2)
+        
+        # Shared feature extraction
+        shared_features = F.relu(self.shared_fc(last_out))
+        shared_features = self.dropout(shared_features)
+        
+        # Task-specific predictions
+        movement_logits = self.movement_head(shared_features)
+        severity_logits = self.severity_head(shared_features)
+        
+        return movement_logits, severity_logits
 
 def create_model(model_type='full', **kwargs):
     """
