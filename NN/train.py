@@ -26,6 +26,9 @@ from DATA.Data_Conversion import create_labeled_dataset, get_num_classes, MOVEME
 from DATA.dataset import create_dataloaders, get_dataset_statistics
 from NN.network import create_model
 
+SCRIPTS_ROOT = os.path.dirname(os.path.dirname(__file__))
+DEFAULT_MODEL_DIR = os.path.join(SCRIPTS_ROOT, 'NN', 'models')
+
 
 class MultiTaskLoss(nn.Module):
     """Combined loss for movement and severity prediction."""
@@ -167,21 +170,21 @@ def train_model(
     window_size=100,
     stride=50,
     train_split=0.8,
-    save_dir='./NN/models',
+    save_dir=None,
     device=None
 ):
     """
     Main training function.
     
     Args:
-        model_type: 'full' or 'lightweight'
+        model_type: 'full', 'standard_cnn', or 'lightweight'
         num_epochs: Number of training epochs
         batch_size: Batch size
         learning_rate: Learning rate for optimizer
         window_size: Timesteps per sample
         stride: Sliding window stride
         train_split: Train/test split ratio
-        save_dir: Directory to save models
+        save_dir: Directory to save models (defaults to Scripts/NN/models)
         device: Device to train on (auto-detect if None)
     """
     # Setup
@@ -189,6 +192,8 @@ def train_model(
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
     
+    if save_dir is None:
+        save_dir = DEFAULT_MODEL_DIR
     os.makedirs(save_dir, exist_ok=True)
     
     # Load and prepare data
@@ -232,6 +237,7 @@ def train_model(
     
     # TensorBoard logging (optional)
     writer = None
+    log_dir = None
     if TENSORBOARD_AVAILABLE:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         log_dir = f'./runs/emg_training_{timestamp}'
@@ -307,16 +313,30 @@ def train_model(
     print(f"\n=== Training Complete ===")
     print(f"Best test loss: {best_test_loss:.4f}")
     print(f"Models saved to: {save_dir}")
-    print(f"TensorBoard logs: {log_dir}")
+    if log_dir is not None:
+        print(f"TensorBoard logs: {log_dir}")
     
     return model, test_metrics
 
 
 if __name__ == "__main__":
-    # Train the full model
-    print("Training Full Model...")
+    print("Select model architecture to train:")
+    print("1. NN-A: full (CNN+GRU)")
+    print("2. NN-B: standard_cnn (CNN-only)")
+    print("3. NN-C: lightweight")
+
+    selected = input("Enter choice (1-3) or press Enter for 1: ").strip()
+    model_map = {
+        "1": "full",
+        "2": "standard_cnn",
+        "3": "lightweight",
+        "": "full"
+    }
+    model_type = model_map.get(selected, "full")
+
+    print(f"\nTraining model type: {model_type}")
     model, metrics = train_model(
-        model_type='full',
+        model_type=model_type,
         num_epochs=30,
         batch_size=32,
         learning_rate=0.001,

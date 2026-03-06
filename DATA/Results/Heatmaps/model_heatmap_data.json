@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-03-06T18:15:02.173224",
+  "models": [
+    "NN-A (Current Architecture)",
+    "NN-B (Standard CNN)"
+  ],
+  "movements": [
+    "No_Movement",
+    "Wrist_Flexion",
+    "Wrist_Extension",
+    "Wrist_Pronation",
+    "Wrist_Supination",
+    "Chuck_Grip",
+    "Hand_Open"
+  ],
+  "accuracy_matrix": [
+    [
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      66.66666666666666,
+      33.33333333333333,
+      66.66666666666666
+    ],
+    [
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0,
+      100.0
+    ]
+  ],
+  "average_per_model": [
+    80.95238095238095,
+    100.0
+  ]
+}

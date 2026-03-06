@@ -17,7 +17,8 @@ from DATA.dataset import get_dataset_statistics
 from NN.train import train_model
 from NN.predict import load_trained_model, predict_from_csv, print_prediction
 
-results_file = "./Output/NNO.csv" # Output file for predictions (can be changed as needed)
+SCRIPTS_ROOT = os.path.dirname(os.path.dirname(__file__))
+results_file = os.path.join(SCRIPTS_ROOT, "Output", "NNO.csv")  # Output file for predictions
 
 def main():
     """
@@ -54,10 +55,10 @@ def main():
     print("\n--- Step 3: Training ---")
     print("To train the model, uncomment the training section below or run:")
     print("  python NN/train.py")
-    print("\nThis will:")
+    print("This will:")
     print("  - Create sliding windows from the EMG data")
     print("  - Split data into train/test sets")
-    print("  - Train a CNN+GRU model to predict movement and severity")
+    print("  - Train selected model architecture (NN-A/NN-B/NN-C)")
     print("  - Save the best model to ./models/")
     print("  - Log training metrics to TensorBoard")
     
@@ -65,8 +66,16 @@ def main():
     
     train_mode = input("\nTrain new model now? (y/n): ").lower()
     if train_mode == 'y':
+        print("\nSelect architecture:")
+        print("1. NN-A (full: CNN+GRU)")
+        print("2. NN-B (standard_cnn: CNN-only)")
+        print("3. NN-C (lightweight)")
+        selected = input("Choice (1-3) or Enter for 1: ").strip()
+        model_map = {"1": "full", "2": "standard_cnn", "3": "lightweight", "": "full"}
+        selected_model_type = model_map.get(selected, "full")
+
         model, metrics = train_model(
-           model_type='full',
+            model_type=selected_model_type,
             num_epochs=30,
             batch_size=32,
             learning_rate=0.001,
@@ -74,12 +83,13 @@ def main():
             stride=50
         )
         print(f"\nTraining complete!")
+        print(f"Model Type: {selected_model_type}")
         print(f"Movement Accuracy: {metrics['movement_acc']*100:.2f}%")
         print(f"Severity Accuracy: {metrics['severity_acc']*100:.2f}%")
         
     # 4. Prediction demo
     print("\n--- Step 4: Prediction (Demo) ---")
-    model_path = "./NN/models/final_model_full.pth"
+    model_path = os.path.join(SCRIPTS_ROOT, "NN", "models", "best_model_full.pth")
 
     from NN.network import save_output_sim # import output save function
     
@@ -88,7 +98,7 @@ def main():
         model, checkpoint = load_trained_model(model_path)
         
         # Predict on example file
-        csv_path = "./DATA/Example_data/S1_Hard_C7_R1.csv"
+        csv_path = os.path.join(SCRIPTS_ROOT, "DATA", "Example_data", "S1_Hard_C7_R1.csv")
         if os.path.exists(csv_path):
             print(f"\nMaking prediction on: {csv_path}")
             results = predict_from_csv(model, csv_path, window_size=100)

@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-import Data_Conversion as DC
+from DATA import Data_Conversion as DC
 from NN.predict import load_trained_model, predict_from_tensor
 from DATA.Data_Conversion import MOVEMENT_LABELS, SEVERITY_LABELS
 
@@ -19,6 +19,14 @@ SAMPLING_RATE_HZ = 1000  # 1 kHz sampling frequency
 TIME_PER_SAMPLE_MS = 1000 / SAMPLING_RATE_HZ  # 1.0 ms per sample
 TIME_PER_SAMPLE_S = 1 / SAMPLING_RATE_HZ  # 0.001 s per sample
 
+# Path configuration (cwd-independent)
+SCRIPTS_ROOT = os.path.dirname(os.path.dirname(__file__))
+MODELS_DIR = os.path.join(SCRIPTS_ROOT, "NN", "models")
+RESULTS_DIR = os.path.join(SCRIPTS_ROOT, "DATA", "Results")
+RAW_RESULTS_DIR = os.path.join(RESULTS_DIR, "Raw_Data")
+PRED_RESULTS_DIR = os.path.join(RESULTS_DIR, "Predicted_Data")
+HEATMAP_RESULTS_DIR = os.path.join(RESULTS_DIR, "Heatmaps")
+
 # ============================================================================
 # MODEL REGISTRY - Configure available NN architectures
 # Each NN architecture (A/B/C) represents a different neural network design
@@ -27,22 +35,22 @@ TIME_PER_SAMPLE_S = 1 / SAMPLING_RATE_HZ  # 0.001 s per sample
 MODEL_REGISTRY = {
     "NN-A": {
         "name": "NN-A (Current Architecture)",
-        "path_best": "Scripts/NN/models/best_model_full.pth",
-        "path_final": "Scripts/NN/models/final_model_full.pth",
+        "path_best": os.path.join(MODELS_DIR, "best_model_full.pth"),
+        "path_final": os.path.join(MODELS_DIR, "final_model_full.pth"),
         "description": "Current neural network architecture with best/final checkpoints",
         "available": True
     },
     "NN-B": {
-        "name": "NN-B (Placeholder - Future)",
-        "path_best": "Scripts/NN/models/B_best_model_full.pth",
-        "path_final": "Scripts/NN/models/B_final_model_full.pth",
-        "description": "Reserved for future NN architecture variant B",
-        "available": False  # Not yet implemented
+        "name": "NN-B (Standard CNN)",
+        "path_best": os.path.join(MODELS_DIR, "best_model_standard_cnn.pth"),
+        "path_final": os.path.join(MODELS_DIR, "final_model_standard_cnn.pth"),
+        "description": "CNN-only baseline inspired by standard CNN EMG layouts",
+        "available": True
     },
     "NN-C": {
         "name": "NN-C (Placeholder - Future)",
-        "path_best": "Scripts/NN/models/C_best_model_full.pth",
-        "path_final": "Scripts/NN/models/C_final_model_full.pth",
+        "path_best": os.path.join(MODELS_DIR, "C_best_model_full.pth"),
+        "path_final": os.path.join(MODELS_DIR, "C_final_model_full.pth"),
         "description": "Reserved for future NN architecture variant C (e.g., CNN+RNN)",
         "available": False  # Not yet implemented
     }
@@ -190,8 +198,9 @@ def plot_raw_window(window, true_movement_idx, true_severity_idx, file_name):
     plt.tight_layout()
     
     # Save to raw data folder
-    plt.savefig(f"Scripts/DATA/Results/Raw_Data/{file_name}.png", dpi=300, bbox_inches="tight")
-    print(f"Saved Raw: Scripts/DATA/Results/Raw_Data/{file_name}.png")
+    output_path = os.path.join(RAW_RESULTS_DIR, f"{file_name}.png")
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    print(f"Saved Raw: {output_path}")
     plt.close()
 
 def plot_window_with_prediction(window, true_movement_idx, true_severity_idx, file_name, window_size=100):
@@ -312,8 +321,9 @@ def plot_window_with_prediction(window, true_movement_idx, true_severity_idx, fi
     plt.tight_layout()
     
     # Save to predicted data folder
-    plt.savefig(f"Scripts/DATA/Results/Predicted_Data/{file_name}.png", dpi=300, bbox_inches="tight")
-    print(f"Saved Predicted: Scripts/DATA/Results/Predicted_Data/{file_name}.png - {status}")
+    output_path = os.path.join(PRED_RESULTS_DIR, f"{file_name}.png")
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    print(f"Saved Predicted: {output_path} - {status}")
     plt.close()
 
 def generate_raw_plots(tensors, window_samples=200):
@@ -322,7 +332,7 @@ def generate_raw_plots(tensors, window_samples=200):
     print("GENERATING RAW EMG PLOTS")
     print("="*80)
     
-    os.makedirs("Scripts/DATA/Results/Raw_Data", exist_ok=True)
+    os.makedirs(RAW_RESULTS_DIR, exist_ok=True)
     
     for severity_name, severity_idx in [("Light", 0), ("Medium", 1), ("Hard", 2)]:
         for movement_idx in range(7):
@@ -337,7 +347,7 @@ def generate_raw_plots(tensors, window_samples=200):
                 file_name=f"{severity_name}_{MOVEMENT_LABELS[movement_idx]}"
             )
     
-    print(f"\n✅ Raw plots saved to: Scripts/DATA/Results/Raw_Data/")
+    print(f"\n✅ Raw plots saved to: {RAW_RESULTS_DIR}")
 
 def generate_predicted_plots(tensors, window_samples=200):
     """Generate EMG plots with NN predictions overlaid."""
@@ -345,7 +355,7 @@ def generate_predicted_plots(tensors, window_samples=200):
     print("GENERATING PREDICTED EMG PLOTS")
     print("="*80)
     
-    os.makedirs("Scripts/DATA/Results/Predicted_Data", exist_ok=True)
+    os.makedirs(PRED_RESULTS_DIR, exist_ok=True)
     
     for severity_name, severity_idx in [("Light", 0), ("Medium", 1), ("Hard", 2)]:
         for movement_idx in range(7):
@@ -360,7 +370,7 @@ def generate_predicted_plots(tensors, window_samples=200):
                 file_name=f"{severity_name}_{MOVEMENT_LABELS[movement_idx]}"
             )
     
-    print(f"\n✅ Predicted plots saved to: Scripts/DATA/Results/Predicted_Data/")
+    print(f"\n✅ Predicted plots saved to: {PRED_RESULTS_DIR}")
 
 def generate_analytics_report():
     """Generate analytics report from collected prediction data."""
@@ -368,7 +378,7 @@ def generate_analytics_report():
     print("GENERATING ANALYTICS REPORT")
     print("="*80)
     
-    os.makedirs("Scripts/DATA/Results", exist_ok=True)
+    os.makedirs(RESULTS_DIR, exist_ok=True)
     
     # Calculate overall accuracies
     movement_accuracy = analytics_data["movement_stats"]
@@ -447,12 +457,12 @@ def generate_analytics_report():
     }
     
     # Save to JSON
-    analytics_file = "Scripts/DATA/Results/analytics_report.json"
+    analytics_file = os.path.join(RESULTS_DIR, "analytics_report.json")
     with open(analytics_file, "w") as f:
         json.dump(analytics_report, f, indent=2)
     
     # Save human-readable summary
-    summary_file = "Scripts/DATA/Results/analytics_summary.txt"
+    summary_file = os.path.join(RESULTS_DIR, "analytics_summary.txt")
     with open(summary_file, "w", encoding='utf-8') as f:
         f.write("="*80 + "\n")
         f.write("EMG CLASSIFICATION ANALYTICS REPORT\n")
@@ -534,7 +544,7 @@ def generate_model_heatmap():
     print("GENERATING MODEL COMPARISON HEATMAP")
     print("="*80)
     
-    os.makedirs("Scripts/DATA/Results/Heatmaps", exist_ok=True)
+    os.makedirs(HEATMAP_RESULTS_DIR, exist_ok=True)
     
     # Collect accuracy data for each model
     model_accuracy_data = {}
@@ -642,7 +652,7 @@ def generate_model_heatmap():
     plt.tight_layout()
     
     # Save figure
-    heatmap_file = "Scripts/DATA/Results/Heatmaps/model_performance_heatmap.png"
+    heatmap_file = os.path.join(HEATMAP_RESULTS_DIR, "model_performance_heatmap.png")
     plt.savefig(heatmap_file, dpi=300, bbox_inches="tight")
     print(f"\n✅ Heatmap saved to: {heatmap_file}")
     
@@ -655,7 +665,7 @@ def generate_model_heatmap():
         "average_per_model": [float(np.mean(row)) for row in accuracies]
     }
     
-    json_file = "Scripts/DATA/Results/Heatmaps/model_heatmap_data.json"
+    json_file = os.path.join(HEATMAP_RESULTS_DIR, "model_heatmap_data.json")
     with open(json_file, "w") as f:
         json.dump(heatmap_data, f, indent=2)
     
@@ -745,12 +755,12 @@ if __name__ == "__main__":
     print(f"   Formula: Time (s) = Sample_Index × {TIME_PER_SAMPLE_S}")
     print(f"\n📁 Output Folders:")
     if generate_raw:
-        print(f"   Raw Data: Scripts/DATA/Results/Raw_Data/")
+        print(f"   Raw Data: {RAW_RESULTS_DIR}")
     if generate_predicted:
-        print(f"   Predicted Data: Scripts/DATA/Results/Predicted_Data/")
+        print(f"   Predicted Data: {PRED_RESULTS_DIR}")
     if generate_analytics:
-        print(f"   Analytics: Scripts/DATA/Results/analytics_report.json")
-        print(f"   Analytics: Scripts/DATA/Results/analytics_summary.txt")
+        print(f"   Analytics: {os.path.join(RESULTS_DIR, 'analytics_report.json')}")
+        print(f"   Analytics: {os.path.join(RESULTS_DIR, 'analytics_summary.txt')}")
     if generate_heatmap:
-        print(f"   Heatmaps: Scripts/DATA/Results/Heatmaps/")
+        print(f"   Heatmaps: {HEATMAP_RESULTS_DIR}")
     print("="*80)

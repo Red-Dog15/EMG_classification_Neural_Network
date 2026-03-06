@@ -1,8 +1,17 @@
 """ Example Data : https://github.com/LibEMG/ContractionIntensity/blob/main/Info.txt"""
 # Convert CSV to DATAFRAMES
+import os
 import pandas as pd
 import torch
 from torch import tensor
+
+DATA_DIR = os.path.dirname(__file__)
+EXAMPLE_DATA_DIR = os.path.join(DATA_DIR, "Example_data")
+
+
+def _example_csv(filename):
+    """Build absolute path to example dataset CSV file."""
+    return os.path.join(EXAMPLE_DATA_DIR, filename)
 
 # --- Label Mappings (Module Level) ---
 MOVEMENT_LABELS = {
@@ -62,31 +71,31 @@ def load_all_datasets():
         return tensors_dict
     
     # CSV path definitions
-    CSV_Light_No_Movement = r"./DATA/Example_data/S1_Light_C1_R1.csv"
-    CSV_Light_Wrist_Flexion = r"./DATA/Example_data/S1_Light_C2_R1.csv"
-    CSV_Light_Wrist_Extension = r"./DATA/Example_data/S1_Light_C3_R1.csv"
-    CSV_Light_Wrist_Pronation = r"./DATA/Example_data/S1_Light_C4_R1.csv"
-    CSV_Light_Wrist_Supination = r"./DATA/Example_data/S1_Light_C5_R1.csv"
-    CSV_Light_Chuck_Grip = r"./DATA/Example_data/S1_Light_C6_R1.csv"
-    CSV_Light_Hand_Open = r"./DATA/Example_data/S1_Light_C7_R1.csv"
+    CSV_Light_No_Movement = _example_csv("S1_Light_C1_R1.csv")
+    CSV_Light_Wrist_Flexion = _example_csv("S1_Light_C2_R1.csv")
+    CSV_Light_Wrist_Extension = _example_csv("S1_Light_C3_R1.csv")
+    CSV_Light_Wrist_Pronation = _example_csv("S1_Light_C4_R1.csv")
+    CSV_Light_Wrist_Supination = _example_csv("S1_Light_C5_R1.csv")
+    CSV_Light_Chuck_Grip = _example_csv("S1_Light_C6_R1.csv")
+    CSV_Light_Hand_Open = _example_csv("S1_Light_C7_R1.csv")
 
     # assign variables for CSV paths of example Medium movements
-    CSV_Medium_No_Movement = r"./DATA/Example_data/S1_Medium_C1_R1.csv"
-    CSV_Medium_Wrist_Flexion = r"./DATA/Example_data/S1_Medium_C2_R1.csv"
-    CSV_Medium_Wrist_Extension = r"./DATA/Example_data/S1_Medium_C3_R1.csv"
-    CSV_Medium_Wrist_Pronation = r"./DATA/Example_data/S1_Medium_C4_R1.csv"
-    CSV_Medium_Wrist_Supination = r"./DATA/Example_data/S1_Medium_C5_R1.csv"
-    CSV_Medium_Chuck_Grip = r"./DATA/Example_data/S1_Medium_C6_R1.csv"
-    CSV_Medium_Hand_Open = r"./DATA/Example_data/S1_Medium_C7_R1.csv"
+    CSV_Medium_No_Movement = _example_csv("S1_Medium_C1_R1.csv")
+    CSV_Medium_Wrist_Flexion = _example_csv("S1_Medium_C2_R1.csv")
+    CSV_Medium_Wrist_Extension = _example_csv("S1_Medium_C3_R1.csv")
+    CSV_Medium_Wrist_Pronation = _example_csv("S1_Medium_C4_R1.csv")
+    CSV_Medium_Wrist_Supination = _example_csv("S1_Medium_C5_R1.csv")
+    CSV_Medium_Chuck_Grip = _example_csv("S1_Medium_C6_R1.csv")
+    CSV_Medium_Hand_Open = _example_csv("S1_Medium_C7_R1.csv")
 
     # assign variables for CSV paths of example Hard movements
-    CSV_Hard_No_Movement = r"./DATA/Example_data/S1_Hard_C1_R1.csv"
-    CSV_Hard_Wrist_Flexion = r"./DATA/Example_data/S1_Hard_C2_R1.csv"
-    CSV_Hard_Wrist_Extension = r"./DATA/Example_data/S1_Hard_C3_R1.csv"
-    CSV_Hard_Wrist_Pronation = r"./DATA/Example_data/S1_Hard_C4_R1.csv"
-    CSV_Hard_Wrist_Supination = r"./DATA/Example_data/S1_Hard_C5_R1.csv"
-    CSV_Hard_Chuck_Grip = r"./DATA/Example_data/S1_Hard_C6_R1.csv"
-    CSV_Hard_Hand_Open = r"./DATA/Example_data/S1_Hard_C7_R1.csv"
+    CSV_Hard_No_Movement = _example_csv("S1_Hard_C1_R1.csv")
+    CSV_Hard_Wrist_Flexion = _example_csv("S1_Hard_C2_R1.csv")
+    CSV_Hard_Wrist_Extension = _example_csv("S1_Hard_C3_R1.csv")
+    CSV_Hard_Wrist_Pronation = _example_csv("S1_Hard_C4_R1.csv")
+    CSV_Hard_Wrist_Supination = _example_csv("S1_Hard_C5_R1.csv")
+    CSV_Hard_Chuck_Grip = _example_csv("S1_Hard_C6_R1.csv")
+    CSV_Hard_Hand_Open = _example_csv("S1_Hard_C7_R1.csv")
 
 
     """ --- DATAFRAME Initialization --- """
