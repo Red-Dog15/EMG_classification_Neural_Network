@@ -1,8 +1,18 @@
 {
-  "timestamp": "2026-03-06T18:15:02.173224",
+  "timestamp": "2026-03-06T18:30:18.565620",
+  "evaluation_type": "test_set_only",
+  "evaluation_details": {
+    "split_ratio": 0.8,
+    "random_seed": 42,
+    "window_size": 100,
+    "stride": 50,
+    "test_samples_evaluated": 248,
+    "note": "Samples distributed randomly across movement classes based on random_split"
+  },
   "models": [
     "NN-A (Current Architecture)",
-    "NN-B (Standard CNN)"
+    "NN-B (Standard CNN)",
+    "NN-C (Lightweight)"
   ],
   "movements": [
     "No_Movement",
@@ -17,11 +27,11 @@
     [
       100.0,
       100.0,
+      94.5945945945946,
+      97.5,
       100.0,
-      100.0,
-      66.66666666666666,
-      33.33333333333333,
-      66.66666666666666
+      96.96969696969697,
+      100.0
     ],
     [
       100.0,
@@ -29,12 +39,22 @@
       100.0,
       100.0,
       100.0,
-      100.0,
+      93.93939393939394,
       100.0
+    ],
+    [
+      100.0,
+      93.33333333333333,
+      75.67567567567568,
+      57.49999999999999,
+      79.48717948717949,
+      45.45454545454545,
+      25.0
     ]
   ],
   "average_per_model": [
-    80.95238095238095,
-    100.0
+    98.43775593775594,
+    99.13419913419914,
+    68.06439056439056
   ]
 }

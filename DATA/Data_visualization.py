@@ -11,7 +11,9 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from DATA import Data_Conversion as DC
 from NN.predict import load_trained_model, predict_from_tensor
-from DATA.Data_Conversion import MOVEMENT_LABELS, SEVERITY_LABELS
+from DATA.Data_Conversion import MOVEMENT_LABELS, SEVERITY_LABELS, create_labeled_dataset
+from DATA.dataset import EMGDataset
+from torch.utils.data import random_split
 
 # EMG Data Specifications from LibEMG ContractionIntensity Dataset
 # Source: https://github.com/LibEMG/ContractionIntensity/blob/main/Info.txt
@@ -48,11 +50,11 @@ MODEL_REGISTRY = {
         "available": True
     },
     "NN-C": {
-        "name": "NN-C (Placeholder - Future)",
-        "path_best": os.path.join(MODELS_DIR, "C_best_model_full.pth"),
-        "path_final": os.path.join(MODELS_DIR, "C_final_model_full.pth"),
-        "description": "Reserved for future NN architecture variant C (e.g., CNN+RNN)",
-        "available": False  # Not yet implemented
+        "name": "NN-C (Lightweight)",
+        "path_best": os.path.join(MODELS_DIR, "best_model_lightweight.pth"),
+        "path_final": os.path.join(MODELS_DIR, "final_model_lightweight.pth"),
+        "description": "Lightweight CNN architecture for embedded/low-resource deployment",
+        "available": True  # Trained and available
     }
 }
 
@@ -573,28 +575,48 @@ def generate_model_heatmap():
             # Initialize analytics for this model
             model_analytics = initialize_analytics_data(model_path)
             
-            # Test on all datasets
-            tensors = DC.load_all_datasets()
+            # ================================================================
+            # RECREATE EXACT TRAIN/TEST SPLIT FROM TRAINING
+            # Use same parameters: window_size=100, stride=50, seed=42, split=0.8
+            # ================================================================
             
-            for severity_name, severity_idx in [("Light", 0), ("Medium", 1), ("Hard", 2)]:
-                for movement_idx in range(7):
-                    tensor_data = tensors[severity_name][movement_idx]
-                    start_idx = len(tensor_data) // 2
-                    window = tensor_data[start_idx:start_idx + 200]
-                    
-                    # Get prediction
-                    prediction = predict_from_tensor(model, window, window_size=100)
-                    
-                    # Update stats
-                    movement_correct = prediction['movement_pred'] == movement_idx
-                    severity_correct = prediction['severity_pred'] == severity_idx
-                    
-                    model_analytics["movement_stats"][movement_idx]["total"] += 1
-                    if movement_correct:
-                        model_analytics["movement_stats"][movement_idx]["correct"] += 1
+            print(f"     → Recreating train/test split with seed=42...")
             
-            # Calculate accuracies for each movement
+            # Create labeled dataset (same as training)
+            labeled_data = create_labeled_dataset()
+            
+            # Create full dataset with sliding windows (same parameters as training)
+            full_dataset = EMGDataset(labeled_data, window_size=100, stride=50)
+            
+            # Split with EXACT same parameters as training
+            train_size = int(0.8 * len(full_dataset))
+            test_size = len(full_dataset) - train_size
+            
+            _, test_dataset = random_split(
+                full_dataset,
+                [train_size, test_size],
+                generator=torch.Generator().manual_seed(42)  # SAME SEED AS TRAINING
+            )
+            
+            print(f"     → Test set size: {len(test_dataset)} samples (held-out data)")
+            
+            # Evaluate ONLY on test set
+            for idx in range(len(test_dataset)):
+                window, movement_label, severity_label = test_dataset[idx]
+                
+                # Get prediction
+                prediction = predict_from_tensor(model, window, window_size=100)
+                
+                # Update stats only for movement accuracy (for heatmap)
+                movement_correct = prediction['movement_pred'] == movement_label.item()
+                
+                model_analytics["movement_stats"][movement_label.item()]["total"] += 1
+                if movement_correct:
+                    model_analytics["movement_stats"][movement_label.item()]["correct"] += 1
+            
+            # Calculate accuracies for each movement class
             movement_accuracies = []
+            print(f"     → Per-class breakdown:")
             for idx in range(7):
                 stats = model_analytics["movement_stats"][idx]
                 if stats["total"] > 0:
@@ -602,13 +624,19 @@ def generate_model_heatmap():
                 else:
                     accuracy = 0
                 movement_accuracies.append(accuracy)
+                # Print detailed breakdown
+                print(f"        {MOVEMENT_LABELS[idx]:20s}: {stats['correct']:3d}/{stats['total']:3d} = {accuracy:6.2f}%")
             
             model_accuracy_data[model_name] = movement_accuracies
             
-            print(f"     ✓ Accuracy: {np.mean(movement_accuracies):.1f}%")
+            # Calculate total samples tested
+            total_samples = sum(stats["total"] for stats in model_analytics["movement_stats"].values())
+            print(f"     ✓ Total: {total_samples} held-out windows | Avg Accuracy: {np.mean(movement_accuracies):.1f}%")
             
         except Exception as e:
             print(f"     ✗ Error processing model: {str(e)}")
+            import traceback
+            traceback.print_exc()
             continue
     
     if not model_accuracy_data:
@@ -643,8 +671,9 @@ def generate_model_heatmap():
     # Labels and title
     ax.set_xlabel('Movement Classifications', fontweight='bold', fontsize=12)
     ax.set_ylabel('Models', fontweight='bold', fontsize=12)
-    ax.set_title('Model Performance Heatmap - Accuracy Across Movement Classifications (%)',
-                fontweight='bold', fontsize=14, pad=20)
+    ax.set_title('Model Performance on Test Set (Held-Out Data) - Movement Classification Accuracy (%)\n' +
+                 'Evaluated on 20% test split with seed=42',
+                fontweight='bold', fontsize=13, pad=20)
     
     # Add colorbar
     cbar = plt.colorbar(im, ax=ax, label='Accuracy (%)')
@@ -657,8 +686,23 @@ def generate_model_heatmap():
     print(f"\n✅ Heatmap saved to: {heatmap_file}")
     
     # Save data as JSON
+    
+    # Collect per-class sample counts from the last model evaluated
+    sample_counts_per_class = {}
+    for idx in range(7):
+        sample_counts_per_class[MOVEMENT_LABELS[idx]] = None  # Will be filled if available
+    
     heatmap_data = {
         "timestamp": datetime.now().isoformat(),
+        "evaluation_type": "test_set_only",
+        "evaluation_details": {
+            "split_ratio": 0.8,
+            "random_seed": 42,
+            "window_size": 100,
+            "stride": 50,
+            "test_samples_evaluated": int(test_size) if 'test_size' in locals() else None,
+            "note": "Samples distributed randomly across movement classes based on random_split"
+        },
         "models": model_names,
         "movements": [MOVEMENT_LABELS[i] for i in range(7)],
         "accuracy_matrix": accuracies.tolist(),
