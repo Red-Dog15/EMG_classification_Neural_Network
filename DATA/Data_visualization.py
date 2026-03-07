@@ -15,6 +15,21 @@ from DATA.Data_Conversion import MOVEMENT_LABELS, SEVERITY_LABELS, create_labele
 from DATA.dataset import EMGDataset
 from torch.utils.data import random_split
 
+# Import shared configuration to match training settings
+try:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+    from config import WINDOW_SIZE, STRIDE, TRAIN_SPLIT, SPLIT_SEED, print_config_summary
+    # Use shared config for consistency
+    _USING_SHARED_CONFIG = True
+except ImportError:
+    # Fallback if config.py not found
+    WINDOW_SIZE = 100
+    STRIDE = 50
+    TRAIN_SPLIT = 0.8
+    SPLIT_SEED = 42
+    _USING_SHARED_CONFIG = False
+    print("⚠ Warning: config.py not found. Using local defaults.")
+
 # EMG Data Specifications from LibEMG ContractionIntensity Dataset
 # Source: https://github.com/LibEMG/ContractionIntensity/blob/main/Info.txt
 SAMPLING_RATE_HZ = 1000  # 1 kHz sampling frequency
@@ -28,6 +43,84 @@ RESULTS_DIR = os.path.join(SCRIPTS_ROOT, "DATA", "Results")
 RAW_RESULTS_DIR = os.path.join(RESULTS_DIR, "Raw_Data")
 PRED_RESULTS_DIR = os.path.join(RESULTS_DIR, "Predicted_Data")
 HEATMAP_RESULTS_DIR = os.path.join(RESULTS_DIR, "Heatmaps")
+
+# ============================================================================
+# HEATMAP EVALUATION CONTROLS
+# 
+# ⚠️ CRITICAL: Window settings (size/stride) are now imported from config.py
+# This ensures training and evaluation use identical window configurations!
+#
+# TO INCREASE/DECREASE THE NUMBER OF WINDOWS FOR TRAINING & EVALUATION:
+# Edit Scripts/config.py and change these variables:
+#
+#   1. STRIDE (most common way to increase windows):
+#      - STRIDE = 50  → ~1,239 windows (current)
+#      - STRIDE = 25  → ~2,457 windows (2x more)
+#      - STRIDE = 10  → ~6,111 windows (5x more)
+#      - STRIDE = 1   → ~60,921 windows (50x more, very slow!)
+#
+#   2. WINDOW_SIZE (affects model input):
+#      - WINDOW_SIZE = 100 → ~1,239 windows (current)
+#      - WINDOW_SIZE = 50  → ~2,499 windows (2x more)
+#      - Note: Changing this requires retraining models!
+#
+#   3. TRAIN_SPLIT (changes train/test ratio):
+#      - TRAIN_SPLIT = 0.8 → 80% train, 20% test (current)
+#      - TRAIN_SPLIT = 0.7 → 70% train, 30% test (more test samples)
+#
+# Run 'python Scripts/config.py' to see the impact of different settigs!n
+#
+# Edit these variables to control how many test windows are used when comparing
+# multiple NN architectures in the heatmap.
+#
+# HEATMAP_TRAIN_SPLIT & HEATMAP_SPLIT_SEED:
+# - Controls the train/test split (0.8 = 80% train, 20% test)
+# - Seed ensures the same split is created on every run (reproducibility)
+#
+# HEATMAP_WINDOW_SIZE & HEATMAP_STRIDE:
+# - Window size: How many consecutive EMG samples form one input (100 samples = 100ms)
+# - Stride: Step size when sliding the window (50 = 50% overlap)
+# - MUST MATCH training settings for fair evaluation
+#
+# HEATMAP_MAX_TEST_SAMPLES (THE KEY CONTROL FOR EVALUATION SAMPLE COUNT):
+# - None       -> Use ALL test windows (no subsampling)
+# - int N      -> Use at most N test windows (if available)
+# 
+# UNDERSTANDING DATA FLOW:
+# 1. You have 21 CSV files (7 movements × 3 severities)
+# 2. Each CSV has ~3000 timesteps × 8 channels = 3000 raw samples
+# 3. Total raw timesteps: 21 × 3000 = 63,000 timesteps
+# 4. Sliding windows convert these to overlapping windows:
+#    - Window size = 100 timesteps (100ms @ 1kHz sampling)
+#    - Stride = 50 (50% overlap between windows)
+#    - Each CSV → ~60 windows: (3000-100)/50 + 1 ≈ 60
+#    - Total windows: 21 × 60 ≈ 1,260 windows
+# 5. Train/test split (80/20):
+#    - Training: ~1,008 windows (80%)
+#    - Testing: ~252 windows (20%)
+# 6. HEATMAP_MAX_TEST_SAMPLES controls which test windows are evaluated:
+#    - If >= 252: Uses all ~252 test windows (no effect)
+#    - If < 252: Uses random subset (THIS is how you control evaluation size)
+#
+# EXAMPLE WITH YOUR DATA (~252 test windows available):
+#   - HEATMAP_MAX_TEST_SAMPLES = None    --> Uses all ~252 windows
+#   - HEATMAP_MAX_TEST_SAMPLES = 1000    --> Uses all ~252 windows (limit has no effect)
+#   - HEATMAP_MAX_TEST_SAMPLES = 200     --> Uses random 200 windows (79% of test set)
+#   - HEATMAP_MAX_TEST_SAMPLES = 100     --> Uses random 100 windows (40% of test set)
+#   - HEATMAP_MAX_TEST_SAMPLES = 50      --> Uses random 50 windows (20% of test set)
+#
+# HEATMAP_SUBSET_STRATEGY:
+# - "random"   -> Deterministic random subset (same samples each run, but shuffled)
+# - "first"    -> Take the first N windows in order
+# ============================================================================
+# IMPORTANT: These now default to shared config values from config.py
+# This ensures evaluation uses the SAME window settings as training!
+HEATMAP_TRAIN_SPLIT = TRAIN_SPLIT     # Train/test split ratio (from config.py)
+HEATMAP_SPLIT_SEED = SPLIT_SEED       # Random seed for reproducible splits (from config.py)
+HEATMAP_WINDOW_SIZE = WINDOW_SIZE     # EMG samples per window (from config.py)
+HEATMAP_STRIDE = STRIDE               # Stride for sliding windows (from config.py)
+HEATMAP_MAX_TEST_SAMPLES = 1000       # Max test windows to evaluate (see explanation above)
+HEATMAP_SUBSET_STRATEGY = "random"    # "random" or "first"
 
 # ============================================================================
 # MODEL REGISTRY - Configure available NN architectures
@@ -69,6 +162,184 @@ def samples_to_time_ms(samples):
 def samples_to_time_s(samples):
     """Convert sample indices to time in seconds."""
     return samples * TIME_PER_SAMPLE_S
+
+
+def select_eval_indices(total_size, max_samples=None, strategy="random", seed=42):
+    """
+    Select test-set indices to evaluate for fair model comparison.
+
+    Args:
+        total_size: Total number of available test windows.
+        max_samples: Optional cap on number of test windows to use.
+        strategy: "random" for seeded random subset, "first" for first-N.
+        seed: Seed used for deterministic random sampling.
+    
+    Returns:
+        list: Indices of test samples to evaluate.
+    
+    How it works:
+        - If max_samples is None or >= total_size: returns ALL indices (no subsampling)
+        - If max_samples < total_size: returns a subset of max_samples indices
+        - Seeded selection ensures the same subset is chosen on repeated runs
+    """
+    if total_size <= 0:
+        return []
+
+    # KEY LOGIC: If max_samples is None or larger than available samples,
+    # we return ALL samples. This means setting max_samples=1000 when you only
+    # have 800 test samples will use all 800 (no subsampling occurs).
+    if max_samples is None or max_samples >= total_size:
+        return list(range(total_size))  # No subsampling - uses everything
+
+    if max_samples <= 0:
+        return []
+
+    if strategy == "first":
+        # Take the first N samples in order
+        return list(range(max_samples))
+
+    # RANDOM SUBSET: Uses deterministic seeding so the same random subset
+    # is selected on every run (ensures fair comparison across multiple runs).
+    generator = torch.Generator().manual_seed(seed)
+    sampled = torch.randperm(total_size, generator=generator)[:max_samples]
+    return sampled.tolist()
+
+def calculate_dataset_breakdown(window_size=100, stride=50, train_split=0.8):
+    """
+    Calculate and display how raw CSV data becomes windowed train/test samples.
+    
+    DATA FLOW:
+    1. Raw CSVs: 21 files (7 movements × 3 severities)
+    2. Each CSV: ~3000 timesteps × 8 channels
+    3. Sliding windows: Convert timesteps into overlapping windows
+    4. Train/test split: Divide windows between training and testing
+    5. Evaluation: Use subset of test windows for model comparison
+    
+    Returns:
+        dict with breakdown statistics
+    """
+    # Constants from your dataset
+    num_movements = 7
+    num_severities = 3
+    num_csv_files = num_movements * num_severities  # 21 files
+    avg_timesteps_per_csv = 3000  # Each CSV has ~3000 rows
+    num_channels = 8
+    
+    # Calculate windows per CSV file
+    # Formula: (total_timesteps - window_size) / stride + 1
+    windows_per_csv = (avg_timesteps_per_csv - window_size) // stride + 1
+    
+    # Total windows from all CSVs
+    total_windows = num_csv_files * windows_per_csv
+    
+    # Train/test split
+    train_windows = int(total_windows * train_split)
+    test_windows = total_windows - train_windows
+    
+    breakdown = {
+        "num_csv_files": num_csv_files,
+        "timesteps_per_csv": avg_timesteps_per_csv,
+        "total_raw_timesteps": num_csv_files * avg_timesteps_per_csv,
+        "window_size": window_size,
+        "stride": stride,
+        "windows_per_csv": windows_per_csv,
+        "total_windows": total_windows,
+        "train_windows": train_windows,
+        "test_windows": test_windows,
+        "train_split": train_split
+    }
+    
+    return breakdown
+
+
+def print_dataset_breakdown():
+    """Print a human-readable explanation of the data flow."""
+    breakdown = calculate_dataset_breakdown(
+        window_size=HEATMAP_WINDOW_SIZE,
+        stride=HEATMAP_STRIDE,
+        train_split=HEATMAP_TRAIN_SPLIT
+    )
+    
+    print("\n" + "="*80)
+    print("📊 DATA FLOW: FROM RAW CSV TO TEST WINDOWS")
+    print("="*80)
+    print(f"\n1️⃣  RAW CSV FILES:")
+    print(f"   • {breakdown['num_csv_files']} CSV files (7 movements × 3 severities)")
+    print(f"   • ~{breakdown['timesteps_per_csv']:,} timesteps per CSV")
+    print(f"   • Total raw timesteps: {breakdown['total_raw_timesteps']:,}")
+    print(f"   • Each timestep has 8 EMG channels")
+    
+    print(f"\n2️⃣  SLIDING WINDOW CONVERSION:")
+    print(f"   • Window size: {breakdown['window_size']} timesteps (100ms @ 1kHz)")
+    print(f"   • Stride: {breakdown['stride']} timesteps (50% overlap)")
+    print(f"   • Windows per CSV: ~{breakdown['windows_per_csv']}")
+    print(f"   • Formula: (3000 - {breakdown['window_size']}) ÷ {breakdown['stride']} + 1 = {breakdown['windows_per_csv']}")
+    
+    print(f"\n3️⃣  TOTAL WINDOWS CREATED:")
+    print(f"   • {breakdown['num_csv_files']} CSVs × {breakdown['windows_per_csv']} windows/CSV = {breakdown['total_windows']:,} total windows")
+    print(f"   • Each window: ({breakdown['window_size']} timesteps, 8 channels)")
+    
+    print(f"\n4️⃣  TRAIN/TEST SPLIT ({int(breakdown['train_split']*100)}/{int((1-breakdown['train_split'])*100)}):")
+    print(f"   • Training windows: {breakdown['train_windows']:,} ({breakdown['train_split']*100:.0f}%)")
+    print(f"   • Test windows: {breakdown['test_windows']:,} ({(1-breakdown['train_split'])*100:.0f}%)")
+    
+    print(f"\n5️⃣  HEATMAP EVALUATION CONTROL:")
+    limit = HEATMAP_MAX_TEST_SAMPLES
+    if limit is None:
+        print(f"   • HEATMAP_MAX_TEST_SAMPLES = None")
+        print(f"   • Will evaluate ALL {breakdown['test_windows']:,} test windows")
+    elif limit >= breakdown['test_windows']:
+        print(f"   • HEATMAP_MAX_TEST_SAMPLES = {limit:,}")
+        print(f"   • ⚠ Limit is >= {breakdown['test_windows']:,} test windows")
+        print(f"   • Will evaluate ALL {breakdown['test_windows']:,} test windows (limit has no effect)")
+    else:
+        pct = (limit / breakdown['test_windows']) * 100
+        print(f"   • HEATMAP_MAX_TEST_SAMPLES = {limit:,}")
+        print(f"   • Will evaluate {limit:,} / {breakdown['test_windows']:,} test windows ({pct:.1f}%)")
+    
+    print("\n" + "="*80)
+    print("💡 KEY INSIGHT:")
+    print(f"   Your {breakdown['total_raw_timesteps']:,} raw timesteps become {breakdown['test_windows']:,} test windows.")
+    print(f"   This is because overlapping windows are created from continuous data.")
+    print(f"   To control evaluation: Set HEATMAP_MAX_TEST_SAMPLES < {breakdown['test_windows']:,}")
+    print("="*80 + "\n")
+    
+    return breakdown
+
+
+def prompt_heatmap_sample_limit(default_limit):
+    """
+    Allow the user to override heatmap sample count at runtime.
+    
+    How this works:
+    - The limit only takes effect if it's SMALLER than the actual test set size
+    - If you have 800 test samples and set limit=1000, all 800 are used
+    - If you have 800 test samples and set limit=400, only 400 are used (random subset)
+    """
+    # Show the breakdown first so user understands what they're controlling
+    breakdown = print_dataset_breakdown()
+    
+    print("-"*80)
+    print("HEATMAP SAMPLE SIZE CONTROL")
+    print("-"*80)
+    print(f"Current default: {default_limit if default_limit is not None else 'all test samples'}")
+    print(f"Available test windows: ~{breakdown['test_windows']}")
+    print("\nEnter:")
+    print("  • Press Enter to keep default")
+    print("  • all  -> use full test set")
+    print(f"  • N    -> use exactly N test windows (max: ~{breakdown['test_windows']})")
+    print(f"\n💡 TIP: Set N < {breakdown['test_windows']} to see actual subsampling")
+
+    raw = input("\nHeatmap test sample count override: ").strip().lower()
+    if raw == "":
+        return default_limit
+    if raw == "all":
+        return None
+    if raw.isdigit() and int(raw) > 0:
+        return int(raw)
+
+    print("Invalid input. Keeping default sample count.")
+    return default_limit
 
 # ============================================================================
 # MODEL AND ANALYTICS INITIALIZATION
@@ -537,7 +808,14 @@ def generate_analytics_report():
     
     print("="*80)
 
-def generate_model_heatmap():
+def generate_model_heatmap(
+    train_split=HEATMAP_TRAIN_SPLIT,
+    split_seed=HEATMAP_SPLIT_SEED,
+    eval_window_size=HEATMAP_WINDOW_SIZE,
+    eval_stride=HEATMAP_STRIDE,
+    max_test_samples=HEATMAP_MAX_TEST_SAMPLES,
+    subset_strategy=HEATMAP_SUBSET_STRATEGY
+):
     """
     Generate a heatmap showing accuracy of different models across movement classifications.
     This allows comparison of multiple NN architectures.
@@ -550,7 +828,54 @@ def generate_model_heatmap():
     
     # Collect accuracy data for each model
     model_accuracy_data = {}
-    movement_names = [MOVEMENT_LABELS[i] for i in range(7)]
+
+    # ================================================================
+    # Build one deterministic held-out test set and reuse it for all models.
+    # This guarantees a fair comparison because each model sees the exact same
+    # test windows in the exact same order.
+    # ================================================================
+    print("\nPreparing held-out test set...")
+    labeled_data = create_labeled_dataset()
+    full_dataset = EMGDataset(labeled_data, window_size=eval_window_size, stride=eval_stride)
+
+    train_size = int(train_split * len(full_dataset))
+    test_size = len(full_dataset) - train_size
+
+    _, test_dataset = random_split(
+        full_dataset,
+        [train_size, test_size],
+        generator=torch.Generator().manual_seed(split_seed)
+    )
+
+    selected_indices = select_eval_indices(
+        total_size=len(test_dataset),
+        max_samples=max_test_samples,
+        strategy=subset_strategy,
+        seed=split_seed + 1
+    )
+
+    if not selected_indices:
+        print("\n⚠ No test samples selected for heatmap evaluation!")
+        return
+
+    actual_eval_count = len(selected_indices)
+    test_dataset_size = len(test_dataset)
+    
+    print(f"\n  📊 TEST SET ANALYSIS:")
+    print(f"  → Full test set size: {test_dataset_size} windows")
+    print(f"  → Max samples requested: {max_test_samples if max_test_samples is not None else 'None (all)'}")
+    print(f"  → Actually evaluating: {actual_eval_count} windows")
+    print(f"  → Subset strategy: {subset_strategy}")
+    
+    # Show whether subsampling occurred
+    if max_test_samples is None:
+        print(f"  → Sampling mode: FULL TEST SET (no limit set)")
+    elif max_test_samples >= test_dataset_size:
+        print(f"  ⚠ Sampling mode: FULL TEST SET (requested {max_test_samples} but only {test_dataset_size} available)")
+        print(f"     TIP: To see subsampling in action, set max_test_samples < {test_dataset_size}")
+    else:
+        pct = (actual_eval_count / test_dataset_size) * 100
+        print(f"  ✓ Sampling mode: RANDOM SUBSET ({pct:.1f}% of test set)")
     
     print(f"\nTesting {len(MODEL_REGISTRY)} NN architectures...")
     
@@ -575,37 +900,12 @@ def generate_model_heatmap():
             # Initialize analytics for this model
             model_analytics = initialize_analytics_data(model_path)
             
-            # ================================================================
-            # RECREATE EXACT TRAIN/TEST SPLIT FROM TRAINING
-            # Use same parameters: window_size=100, stride=50, seed=42, split=0.8
-            # ================================================================
-            
-            print(f"     → Recreating train/test split with seed=42...")
-            
-            # Create labeled dataset (same as training)
-            labeled_data = create_labeled_dataset()
-            
-            # Create full dataset with sliding windows (same parameters as training)
-            full_dataset = EMGDataset(labeled_data, window_size=100, stride=50)
-            
-            # Split with EXACT same parameters as training
-            train_size = int(0.8 * len(full_dataset))
-            test_size = len(full_dataset) - train_size
-            
-            _, test_dataset = random_split(
-                full_dataset,
-                [train_size, test_size],
-                generator=torch.Generator().manual_seed(42)  # SAME SEED AS TRAINING
-            )
-            
-            print(f"     → Test set size: {len(test_dataset)} samples (held-out data)")
-            
-            # Evaluate ONLY on test set
-            for idx in range(len(test_dataset)):
+            # Evaluate model on the same selected held-out windows.
+            for idx in selected_indices:
                 window, movement_label, severity_label = test_dataset[idx]
                 
                 # Get prediction
-                prediction = predict_from_tensor(model, window, window_size=100)
+                prediction = predict_from_tensor(model, window, window_size=eval_window_size)
                 
                 # Update stats only for movement accuracy (for heatmap)
                 movement_correct = prediction['movement_pred'] == movement_label.item()
@@ -672,7 +972,7 @@ def generate_model_heatmap():
     ax.set_xlabel('Movement Classifications', fontweight='bold', fontsize=12)
     ax.set_ylabel('Models', fontweight='bold', fontsize=12)
     ax.set_title('Model Performance on Test Set (Held-Out Data) - Movement Classification Accuracy (%)\n' +
-                 'Evaluated on 20% test split with seed=42',
+                 f'Evaluated on {actual_eval_count} windows from test split (seed={split_seed})',
                 fontweight='bold', fontsize=13, pad=20)
     
     # Add colorbar
@@ -696,12 +996,16 @@ def generate_model_heatmap():
         "timestamp": datetime.now().isoformat(),
         "evaluation_type": "test_set_only",
         "evaluation_details": {
-            "split_ratio": 0.8,
-            "random_seed": 42,
-            "window_size": 100,
-            "stride": 50,
-            "test_samples_evaluated": int(test_size) if 'test_size' in locals() else None,
-            "note": "Samples distributed randomly across movement classes based on random_split"
+            "train_split_ratio": train_split,
+            "test_split_ratio": 1 - train_split,
+            "random_seed": split_seed,
+            "window_size": eval_window_size,
+            "stride": eval_stride,
+            "test_samples_available": len(test_dataset),
+            "test_samples_evaluated": actual_eval_count,
+            "max_test_samples_requested": max_test_samples,
+            "subset_strategy": subset_strategy,
+            "note": "All models are evaluated on the exact same selected held-out windows"
         },
         "models": model_names,
         "movements": [MOVEMENT_LABELS[i] for i in range(7)],
@@ -787,7 +1091,8 @@ if __name__ == "__main__":
     
     # Generate heatmap (tests all models, independent of above)
     if generate_heatmap:
-        generate_model_heatmap()
+        heatmap_max_samples = prompt_heatmap_sample_limit(HEATMAP_MAX_TEST_SAMPLES)
+        generate_model_heatmap(max_test_samples=heatmap_max_samples)
     
     print("\n" + "="*80)
     print("COMPLETE!")

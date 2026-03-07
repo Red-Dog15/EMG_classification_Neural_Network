@@ -26,6 +26,18 @@ from DATA.Data_Conversion import create_labeled_dataset, get_num_classes, MOVEME
 from DATA.dataset import create_dataloaders, get_dataset_statistics
 from NN.network import create_model
 
+# Import shared configuration to ensure consistency with evaluation
+try:
+    from config import WINDOW_SIZE, STRIDE, TRAIN_SPLIT, SPLIT_SEED
+    print(f"✓ Using shared config: window_size={WINDOW_SIZE}, stride={STRIDE}")
+except ImportError:
+    # Fallback defaults if config.py not found
+    WINDOW_SIZE = 100
+    STRIDE = 50
+    TRAIN_SPLIT = 0.8
+    SPLIT_SEED = 42
+    print("⚠ config.py not found, using default settings")
+
 SCRIPTS_ROOT = os.path.dirname(os.path.dirname(__file__))
 DEFAULT_MODEL_DIR = os.path.join(SCRIPTS_ROOT, 'NN', 'models')
 
@@ -167,9 +179,9 @@ def train_model(
     num_epochs=50,
     batch_size=32,
     learning_rate=0.001,
-    window_size=100,
-    stride=50,
-    train_split=0.8,
+    window_size=WINDOW_SIZE,  # From shared config
+    stride=STRIDE,            # From shared config
+    train_split=TRAIN_SPLIT,  # From shared config
     save_dir=None,
     device=None
 ):
@@ -335,13 +347,13 @@ if __name__ == "__main__":
     model_type = model_map.get(selected, "full")
 
     print(f"\nTraining model type: {model_type}")
+    print(f"Window config: size={WINDOW_SIZE}, stride={STRIDE}")
     model, metrics = train_model(
         model_type=model_type,
         num_epochs=30,
         batch_size=32,
-        learning_rate=0.001,
-        window_size=100,
-        stride=50
+        learning_rate=0.001
+        # window_size, stride, train_split use shared config defaults
     )
     
     print(f"\nFinal Test Metrics:")

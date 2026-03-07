@@ -50,3 +50,5 @@ diagnose_actuators.py
 .Output/
 NNO_Myo_S.txt*
 
+.DATA/
+show_data_breakdown.py*
