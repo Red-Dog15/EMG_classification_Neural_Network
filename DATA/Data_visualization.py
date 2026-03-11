@@ -68,19 +68,14 @@ HEATMAP_RESULTS_DIR = os.path.join(RESULTS_DIR, "Heatmaps")
 #      - TRAIN_SPLIT = 0.8 → 80% train, 20% test (current)
 #      - TRAIN_SPLIT = 0.7 → 70% train, 30% test (more test samples)
 #
-# Run 'python Scripts/config.py' to see the impact of different settigs!n
+# Run 'python Scripts/config.py' to see the impact of different settings!
 #
-# Edit these variables to control how many test windows are used when comparing
-# multiple NN architectures in the heatmap.
-#
-# HEATMAP_TRAIN_SPLIT & HEATMAP_SPLIT_SEED:
-# - Controls the train/test split (0.8 = 80% train, 20% test)
-# - Seed ensures the same split is created on every run (reproducibility)
-#
-# HEATMAP_WINDOW_SIZE & HEATMAP_STRIDE:
-# - Window size: How many consecutive EMG samples form one input (100 samples = 100ms)
-# - Stride: Step size when sliding the window (50 = 50% overlap)
-# - MUST MATCH training settings for fair evaluation
+# ============================================================================
+# EVALUATION CONTROLS - Configure heatmap generation settings
+# ============================================================================
+# NOTE: Window settings (WINDOW_SIZE, STRIDE, TRAIN_SPLIT) are imported from
+# config.py and CANNOT be changed here. These must match training settings!
+# If you change config.py, you MUST retrain models before evaluation.
 #
 # HEATMAP_MAX_TEST_SAMPLES (THE KEY CONTROL FOR EVALUATION SAMPLE COUNT):
 # - None       -> Use ALL test windows (no subsampling)
@@ -113,12 +108,6 @@ HEATMAP_RESULTS_DIR = os.path.join(RESULTS_DIR, "Heatmaps")
 # - "random"   -> Deterministic random subset (same samples each run, but shuffled)
 # - "first"    -> Take the first N windows in order
 # ============================================================================
-# IMPORTANT: These now default to shared config values from config.py
-# This ensures evaluation uses the SAME window settings as training!
-HEATMAP_TRAIN_SPLIT = TRAIN_SPLIT     # Train/test split ratio (from config.py)
-HEATMAP_SPLIT_SEED = SPLIT_SEED       # Random seed for reproducible splits (from config.py)
-HEATMAP_WINDOW_SIZE = WINDOW_SIZE     # EMG samples per window (from config.py)
-HEATMAP_STRIDE = STRIDE               # Stride for sliding windows (from config.py)
 HEATMAP_MAX_TEST_SAMPLES = 1000       # Max test windows to evaluate (see explanation above)
 HEATMAP_SUBSET_STRATEGY = "random"    # "random" or "first"
 
@@ -204,6 +193,36 @@ def select_eval_indices(total_size, max_samples=None, strategy="random", seed=42
     sampled = torch.randperm(total_size, generator=generator)[:max_samples]
     return sampled.tolist()
 
+def validate_model_config(checkpoint, model_name):
+    """
+    Validate that a loaded model was trained with the current config settings.
+    
+    Args:
+        checkpoint: Model checkpoint dict containing training metadata
+        model_name: Name of the model for error messages
+    
+    Returns:
+        bool: True if compatible, False otherwise
+    """
+    if 'window_size' not in checkpoint:
+        print(f"\n⚠️  Warning: {model_name} doesn't have window_size metadata.")
+        print(f"   This is an old model. Assuming it was trained correctly.")
+        return True
+    
+    model_window_size = checkpoint['window_size']
+    current_window_size = WINDOW_SIZE
+    
+    if model_window_size != current_window_size:
+        print(f"\n❌ ERROR: Config mismatch for {model_name}!")
+        print(f"   Model was trained with: window_size={model_window_size}")
+        print(f"   Current config.py has:  window_size={current_window_size}")
+        print(f"\n   ⚠️  You MUST retrain this model after changing config.py!")
+        print(f"   Run: python Scripts/NN/train.py")
+        return False
+    
+    return True
+
+
 def calculate_dataset_breakdown(window_size=100, stride=50, train_split=0.8):
     """
     Calculate and display how raw CSV data becomes windowed train/test samples.
@@ -255,9 +274,9 @@ def calculate_dataset_breakdown(window_size=100, stride=50, train_split=0.8):
 def print_dataset_breakdown():
     """Print a human-readable explanation of the data flow."""
     breakdown = calculate_dataset_breakdown(
-        window_size=HEATMAP_WINDOW_SIZE,
-        stride=HEATMAP_STRIDE,
-        train_split=HEATMAP_TRAIN_SPLIT
+        window_size=WINDOW_SIZE,
+        stride=STRIDE,
+        train_split=TRAIN_SPLIT
     )
     
     print("\n" + "="*80)
@@ -301,7 +320,8 @@ def print_dataset_breakdown():
     print("💡 KEY INSIGHT:")
     print(f"   Your {breakdown['total_raw_timesteps']:,} raw timesteps become {breakdown['test_windows']:,} test windows.")
     print(f"   This is because overlapping windows are created from continuous data.")
-    print(f"   To control evaluation: Set HEATMAP_MAX_TEST_SAMPLES < {breakdown['test_windows']:,}")
+    print(f"\n⚠️  To change window count: Edit Scripts/config.py and retrain models!")
+    print(f"   Current: WINDOW_SIZE={WINDOW_SIZE}, STRIDE={STRIDE}")
     print("="*80 + "\n")
     
     return breakdown
@@ -809,10 +829,10 @@ def generate_analytics_report():
     print("="*80)
 
 def generate_model_heatmap(
-    train_split=HEATMAP_TRAIN_SPLIT,
-    split_seed=HEATMAP_SPLIT_SEED,
-    eval_window_size=HEATMAP_WINDOW_SIZE,
-    eval_stride=HEATMAP_STRIDE,
+    train_split=TRAIN_SPLIT,
+    split_seed=SPLIT_SEED,
+    eval_window_size=WINDOW_SIZE,
+    eval_stride=STRIDE,
     max_test_samples=HEATMAP_MAX_TEST_SAMPLES,
     subset_strategy=HEATMAP_SUBSET_STRATEGY
 ):
@@ -895,7 +915,12 @@ def generate_model_heatmap(
         
         try:
             # Load model
-            model, _ = load_trained_model(model_path)
+            model, checkpoint = load_trained_model(model_path)
+            
+            # Validate model was trained with current config
+            if not validate_model_config(checkpoint, model_name):
+                print(f"     ✗ Skipping due to config mismatch")
+                continue
             
             # Initialize analytics for this model
             model_analytics = initialize_analytics_data(model_path)

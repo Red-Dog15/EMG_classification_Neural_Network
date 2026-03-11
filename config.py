@@ -29,7 +29,7 @@ WINDOW_SIZE = 100
 #   Stride=25  → (3000-100)/25  + 1 = 117 windows per CSV → 2,457 total windows
 #   Stride=10  → (3000-100)/10  + 1 = 291 windows per CSV → 6,111 total windows
 #   Stride=1   → (3000-100)/1   + 1 = 2,901 windows per CSV → 60,921 total windows
-STRIDE = 50
+STRIDE = 25
 
 # TRAIN_SPLIT: Fraction of windows used for training vs testing
 # - 0.8 = 80% training, 20% testing

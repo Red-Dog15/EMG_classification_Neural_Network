@@ -1,13 +1,17 @@
 {
-  "timestamp": "2026-03-06T18:30:18.565620",
+  "timestamp": "2026-03-07T18:04:27.655142",
   "evaluation_type": "test_set_only",
   "evaluation_details": {
-    "split_ratio": 0.8,
+    "train_split_ratio": 0.8,
+    "test_split_ratio": 0.19999999999999996,
     "random_seed": 42,
     "window_size": 100,
-    "stride": 50,
-    "test_samples_evaluated": 248,
-    "note": "Samples distributed randomly across movement classes based on random_split"
+    "stride": 25,
+    "test_samples_available": 492,
+    "test_samples_evaluated": 492,
+    "max_test_samples_requested": 1000,
+    "subset_strategy": "random",
+    "note": "All models are evaluated on the exact same selected held-out windows"
   },
   "models": [
     "NN-A (Current Architecture)",
@@ -27,34 +31,34 @@
     [
       100.0,
       100.0,
-      94.5945945945946,
-      97.5,
+      92.40506329113924,
       100.0,
-      96.96969696969697,
-      100.0
+      100.0,
+      98.50746268656717,
+      98.38709677419355
     ],
     [
       100.0,
       100.0,
+      97.46835443037975,
+      98.36065573770492,
       100.0,
-      100.0,
-      100.0,
-      93.93939393939394,
+      92.53731343283582,
       100.0
     ],
     [
       100.0,
-      93.33333333333333,
-      75.67567567567568,
-      57.49999999999999,
-      79.48717948717949,
-      45.45454545454545,
-      25.0
+      98.50746268656717,
+      75.9493670886076,
+      90.1639344262295,
+      61.25000000000001,
+      85.07462686567165,
+      69.35483870967742
     ]
   ],
   "average_per_model": [
-    98.43775593775594,
-    99.13419913419914,
-    68.06439056439056
+    98.47137467884285,
+    98.33804622870294,
+    82.90003282525048
   ]
 }
