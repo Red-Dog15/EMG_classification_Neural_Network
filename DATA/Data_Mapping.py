@@ -192,6 +192,27 @@ def activation_blender(converted_movements):
         blended_results.append((movement_name, blended_activation))    
     return blended_results
 
+
+def results_to_action(results, actuator_names, action_size=None):
+    """
+    Convert a predict_from_tensor() results dict directly to a MyoSuite action vector.
+    Top-1 movement only — no file I/O, no intermediate pipeline steps.
+
+    :param results: Dict returned by predict_from_tensor() / predict_from_csv()
+    :param actuator_names: List of actuator name strings from the live environment
+    :param action_size: Optional override; inferred from actuator_names when None
+    :return: List[float] activation vector ready for env.step()
+    """
+    if action_size is None:
+        action_size = len(actuator_names)
+
+    movement_name = results.get("movement_name", "No_Movement")
+    return get_MyoSuite_Movement_LUT(
+        movement_name=movement_name,
+        action_size=action_size,
+        actuator_names=actuator_names,
+    )
+
 """
 # Example usage of activation_blender with probable movements
 data = data_parser(data_dir)
