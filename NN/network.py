@@ -127,30 +127,35 @@ class LightweightEMG_Model(nn.Module):
     Good for testing and microcontroller deployment.
     """
     
-    def __init__(self, num_channels=8, num_movements=7, num_severities=3):
+    def __init__(self, num_channels=8, num_movements=7, num_severities=3,
+                 conv1_channels=32, conv2_channels=64, shared_dim=128, dropout=0.25):
         super(LightweightEMG_Model, self).__init__()
         
         # Simple CNN
-        self.conv1 = nn.Conv1d(num_channels, 16, kernel_size=5, padding=2)
-        self.conv2 = nn.Conv1d(16, 32, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv1d(num_channels, conv1_channels, kernel_size=5, padding=2)
+        self.bn1 = nn.BatchNorm1d(conv1_channels)
+        self.conv2 = nn.Conv1d(conv1_channels, conv2_channels, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm1d(conv2_channels)
         self.pool = nn.AdaptiveAvgPool1d(1)
         
         # Shared features
-        self.fc_shared = nn.Linear(32, 64)
+        self.fc_shared = nn.Linear(conv2_channels, shared_dim)
+        self.dropout = nn.Dropout(dropout)
         
         # Output heads
-        self.fc_movement = nn.Linear(64, num_movements)
-        self.fc_severity = nn.Linear(64, num_severities)
+        self.fc_movement = nn.Linear(shared_dim, num_movements)
+        self.fc_severity = nn.Linear(shared_dim, num_severities)
         
     def forward(self, x):
         # x: (batch, seq_len, channels)
         x = x.transpose(1, 2)  # -> (batch, channels, seq_len)
         
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
         x = self.pool(x).squeeze(-1)  # (batch, 32)
         
         shared = F.relu(self.fc_shared(x))
+        shared = self.dropout(shared)
         
         movement_logits = self.fc_movement(shared)
         severity_logits = self.fc_severity(shared)

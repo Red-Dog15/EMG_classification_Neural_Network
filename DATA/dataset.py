@@ -3,8 +3,10 @@ EMG Dataset preparation for PyTorch training.
 Creates train/test splits and DataLoader utilities.
 """
 
+import random
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from collections import defaultdict
+from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
 
@@ -53,8 +55,8 @@ class EMGDataset(Dataset):
                 self.severity_labels[idx])
 
 
-def create_dataloaders(labeled_data, batch_size=32, train_split=0.8, 
-                       window_size=100, stride=50, num_workers=0):
+def create_dataloaders(labeled_data, batch_size=32, train_split=0.8,
+                       window_size=100, stride=50, num_workers=0, split_seed=42):
     """
     Create train and test DataLoaders.
     
@@ -65,22 +67,29 @@ def create_dataloaders(labeled_data, batch_size=32, train_split=0.8,
         window_size: Timesteps per sample
         stride: Sliding window stride
         num_workers: Number of worker processes for data loading
+        split_seed: Seed used for reproducible recording-level split
         
     Returns:
         train_loader, test_loader: PyTorch DataLoader objects
     """
-    # Create full dataset
-    dataset = EMGDataset(labeled_data, window_size=window_size, stride=stride)
-    
-    # Split into train and test
-    train_size = int(train_split * len(dataset))
-    test_size = len(dataset) - train_size
-    
-    train_dataset, test_dataset = random_split(
-        dataset, 
-        [train_size, test_size],
-        generator=torch.Generator().manual_seed(42)  # For reproducibility
-    )
+    # Split at the recording level (stratified by movement class) to prevent
+    # data leakage from overlapping windows spanning the train/test boundary.
+    groups = defaultdict(list)
+    for item in labeled_data:
+        groups[item[1]].append(item)  # item[1] is movement_label
+
+    rng = random.Random(split_seed)
+    train_recordings, test_recordings = [], []
+    for class_items in groups.values():
+        shuffled = list(class_items)
+        rng.shuffle(shuffled)
+        # At least 1 test recording per class, at least 1 train recording per class
+        n_test = max(1, min(len(shuffled) - 1, round(len(shuffled) * (1 - train_split))))
+        test_recordings.extend(shuffled[:n_test])
+        train_recordings.extend(shuffled[n_test:])
+
+    train_dataset = EMGDataset(train_recordings, window_size=window_size, stride=stride)
+    test_dataset  = EMGDataset(test_recordings,  window_size=window_size, stride=stride)
     
     # Create DataLoaders
     train_loader = DataLoader(
@@ -99,6 +108,7 @@ def create_dataloaders(labeled_data, batch_size=32, train_split=0.8,
         pin_memory=True if torch.cuda.is_available() else False
     )
     
+    print(f"Train recordings: {len(train_recordings)}, Test recordings: {len(test_recordings)}")
     print(f"Train samples: {len(train_dataset)}, Test samples: {len(test_dataset)}")
     
     return train_loader, test_loader

@@ -167,9 +167,134 @@ blended_activations = activation_blender(converted_movements)
 - [ ] Create `MyoSuiteFormatter()` for final output formatting
 - [ ] Test with multiple simultaneous movements
 - [ ] Validate smooth transitions between movement states
-Generating visualizations with NN predictions...
 
-Current Result Accuracy of an average of 
+---
+
+## Update 4.0 - Full Simulation Pipeline & Subprocess Inference (March 16, 2026)
+
+### Achievements
+- ✓ Implemented subprocess-based NN inference worker isolating PyTorch from myosuite conda env
+- ✓ Built full interactive simulation pipeline in `simulation/run_nn.py`
+- ✓ Added two-level model picker (architecture + checkpoint variant)
+- ✓ Integrated joint tuning system with smoothstep qpos interpolation
+- ✓ Created persistent session API for external callers (`create_nn_session`, etc.)
+- ✓ Added passive viewer with camera presets and skin toggle via `viewer_utils.py`
+- ✓ Implemented severity-based transition timing for realistic movement speed
+
+### Inference Worker Subprocess (`Scripts/NN/inference_worker.py`)
+
+The NN inference now runs in a **separate subprocess** under `Scripts/.venv` (where PyTorch is installed), while the simulation environment runs under the myosuite conda environment. The two processes communicate via **newline-delimited JSON over stdin/stdout**.
+
+**Protocol**:
+```
+Parent → worker  stdin  : {"window": [[f, f, ...] * 8] * window_size}
+                          | {"command": "exit"}
+Worker → parent  stdout : {"status": "ready"}              (once, on model load)
+                        : {"movement_name": str,
+                           "movement_pred": int,
+                           "movement_confidence": float,
+                           "severity_name": str,
+                           "severity_pred": int,
+                           "severity_confidence": float}   (per window)
+```
+
+Worker stderr is forwarded directly to the parent terminal for debug output — it never pollutes the JSON channel. The worker suppresses stdout during model loading to prevent spurious output before the `ready` signal.
+
+### Interactive Model Picker
+
+`_pick_model()` in `run_nn.py` presents a two-level menu:
+
+**Level 1 — Architecture**:
+- NN-A: Full CNN+GRU (`full`)
+- NN-B: Standard CNN (`standard_cnn`)
+- NN-C: Lightweight CNN (`lightweight`)
+
+**Level 2 — Checkpoint Variant**:
+- `best`: lowest validation-loss checkpoint
+- `final`: end-of-training checkpoint
+
+Each option shows `✓` or `missing` based on file presence. Navigation supports `b` to go back and `q` to quit.
+
+### Interactive CSV / Movement Picker
+
+`_prompt_csv()` provides two input modes:
+- **Input mode**: manually enter a CSV file path
+- **Control mode**: select movement class (0–6) and severity (Light/Medium/Hard) to auto-resolve the matching example CSV (`S1_{Severity}_C{idx+1}_R1.csv`)
+
+### Runtime Keyboard Controls
+
+During CSV replay the following single-key commands are handled non-blocking (Windows only via `msvcrt`):
+- `b` — abort current replay and return to movement selection
+- `q` — quit the simulation entirely
+
+### End-of-CSV Prompt
+
+After each replay finishes the user is shown:
+```
+s) Same movement again
+n) New movement / severity
+v) Visual settings
+q) Quit
+```
+The worker and environment are **not restarted** between replays.
+
+### Joint Tuning Integration
+
+When `Output/joint_tuning/<Movement>.json` files exist (exported from the tuning sandbox), `run_nn.py` drives the arm using **joint position interpolation** rather than actuator action-space commands:
+
+1. `_load_exported_joint_targets(movement_name)` — reads `target_joint_qpos` (exact values) or `target_jnt_range` (midpoint fallback) from the JSON file
+2. `_resolve_joint_qpos_targets(env, joint_targets)` — maps joint names to qpos indices, clamping to joint limits
+3. `_apply_joint_targets_interp(env, start_qpos, target_qpos, phase)` — interpolates from the start pose to the target pose using smoothstep: $f(x) = x^2(3 - 2x)$
+
+If no tuning file is found, the system falls back to LUT-based actuator control via `results_to_action()`.
+
+### Persistent Session API
+
+For external callers (e.g., `gui_controller.py`), three functions manage the simulation lifecycle:
+- `create_nn_session(model_path, stride, steps_per_window, print_every)` — spawns the worker, opens the environment and passive viewer, returns a session dict
+- `run_csv_once_in_session(session, csv_path, stop_check, log_fn, window_log_fn)` — replays one CSV in an existing session; returns `'completed'`, `'aborted'`, or `'viewer_closed'`
+- `close_nn_session(session)` — tears down worker, viewer, and environment
+
+### Passive Viewer (`viewer_utils.py`)
+
+A shared `viewer_utils.py` module provides:
+- `open_passive_viewer(env)` / `close_passive_viewer(viewer)` / `sync_passive_viewer(viewer)` — lifecycle management
+- `run_viewer_submenu(env, viewer)` — interactive settings menu (camera presets, skin toggle)
+- `CAMERA_PRESETS` — named presets: `default`, `front`, `side`, `top`, `close`
+- Supports native mujoco bindings, dm_control wrappers, and legacy mujoco_py via `_get_mj_model_data()`
+
+### Severity-Based Transition Timing
+
+`NN_SEVERITY_TRANSITION_DURATION_FACTOR` (in `config.py`) scales how many simulation steps are used for the transition phase:
+
+| Severity | Factor | Effect |
+|----------|--------|--------|
+| Light    | 4.0    | Slow, gentle transition |
+| Medium   | 2.0    | Moderate speed |
+| Hard     | 0.45   | Fast, forceful transition |
+
+The transition step count is: `transition_steps = round(steps_per_window × NN_TRANSITION_BASE_FRACTION × duration_factor)`, clipped to `NN_TRANSITION_MIN_STEPS`.
+
+### Config Updates (`simulation/config.py`)
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| `DEFAULT_ENV_ID` | `myoHandReachFixed-v0` | Single env for all movement tasks |
+| `NN_WINDOW_SIZE` | 150 | Increased from 100 for smoother predictions |
+| `NN_INFERENCE_STRIDE` | 25 | Steps between windows |
+| `NN_TRANSITION_BASE_FRACTION` | 0.80 | Fraction of steps used for transition |
+| `NN_TRANSITION_MIN_STEPS` | 2 | Floor on transition steps |
+| `NN_ACTIVE_STEP_SLEEP_FACTOR` | 1.0 | Multiplier on `env.dt` during active movement |
+| `NN_NO_MOVEMENT_HOLD_SLEEP_FACTOR` | 1.0 | Multiplier on `env.dt` during No_Movement hold |
+| `VENV_PYTHON_PATH` | `Scripts/.venv/Scripts/python.exe` | Overridable via `NN_VENV_PYTHON` env var |
+| `NN_INFERENCE_WORKER_PATH` | `Scripts/NN/inference_worker.py` | Worker script path |
+
+### Next Steps
+- [ ] Collect performance metrics for each model architecture under real-time conditions
+- [ ] Tune `NN_SEVERITY_TRANSITION_DURATION_FACTOR` values against physical arm response
+- [ ] Validate joint tuning JSON files for all 6 movement classes
+- [ ] Extend `viewer_utils.py` with recording/export capability
+- [ ] Evaluate multi-subject generalisation with new EMG recordings
 Saved: DATA/Results/Light_No_Movement.png - ⚠ Movement OK, Severity Wrong
 Saved: DATA/Results/Light_Wrist_Flexion.png - ⚠ Movement OK, Severity Wrong
 Saved: DATA/Results/Light_Wrist_Extension.png - ✓ CORRECT

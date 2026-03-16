@@ -86,7 +86,7 @@ class EMGRealtimeServer:
             print(f"\n[LOADED] {os.path.basename(csv_path)}")
             print(f"  Samples: {self.emg_data.shape[0]}")
             print(f"  Channels: {self.emg_data.shape[1]}")
-            print(f"  Duration: ~{self.emg_data.shape[0]/200:.2f}s (at 200 Hz)")
+            print(f"  Duration: ~{self.emg_data.shape[0]/1000:.2f}s (at 1000 Hz)")
             
             return True
         except Exception as e:

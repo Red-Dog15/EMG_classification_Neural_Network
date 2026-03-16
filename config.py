@@ -29,7 +29,7 @@ WINDOW_SIZE = 100
 #   Stride=25  → (3000-100)/25  + 1 = 117 windows per CSV → 2,457 total windows
 #   Stride=10  → (3000-100)/10  + 1 = 291 windows per CSV → 6,111 total windows
 #   Stride=1   → (3000-100)/1   + 1 = 2,901 windows per CSV → 60,921 total windows
-STRIDE = 25
+STRIDE = 10
 
 # TRAIN_SPLIT: Fraction of windows used for training vs testing
 # - 0.8 = 80% training, 20% testing
@@ -38,6 +38,24 @@ TRAIN_SPLIT = 0.8
 
 # SPLIT_SEED: Random seed for reproducible train/test splits
 SPLIT_SEED = 42
+
+# ============================================================================
+# TRAINING DEFAULTS
+# ============================================================================
+
+# Increased epochs to give stricter split training enough optimization time.
+NUM_EPOCHS = 60
+BATCH_SIZE = 64
+LEARNING_RATE = 0.001
+EARLY_STOPPING_PATIENCE = 10
+
+# Multi-task loss weighting (movement-priority optimization)
+MOVEMENT_LOSS_WEIGHT = 1.0
+SEVERITY_LOSS_WEIGHT = 0.2
+
+# Early stopping monitor options: "loss", "movement_acc", "severity_acc"
+EARLY_STOPPING_MONITOR = "movement_acc"
+EARLY_STOPPING_MIN_DELTA = 0.001
 
 # ============================================================================
 # CALCULATION HELPER

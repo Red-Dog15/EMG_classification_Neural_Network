@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-01-15T21:50:01.657398",
+  "timestamp": "2026-03-16T15:48:44.729826",
   "model": "NN/models/best_model_full.pth",
   "total_samples": 21,
   "overall_metrics": {
-    "movement_accuracy": 0.8095238095238095,
-    "severity_accuracy": 0.5714285714285714,
-    "combined_accuracy": 0.47619047619047616
+    "movement_accuracy": 0.2857142857142857,
+    "severity_accuracy": 0.5238095238095238,
+    "combined_accuracy": 0.14285714285714285
   },
   "movement_class_performance": {
     "0": {
@@ -16,87 +16,102 @@
     },
     "1": {
       "name": "Wrist_Flexion",
-      "accuracy": 1.0,
-      "correct": 3,
+      "accuracy": 0.6666666666666666,
+      "correct": 2,
       "total": 3
     },
     "2": {
       "name": "Wrist_Extension",
-      "accuracy": 1.0,
-      "correct": 3,
-      "total": 3
-    },
-    "3": {
-      "name": "Wrist_Pronation",
-      "accuracy": 0.6666666666666666,
-      "correct": 2,
-      "total": 3
-    },
-    "4": {
-      "name": "Wrist_Supination",
-      "accuracy": 0.6666666666666666,
-      "correct": 2,
-      "total": 3
-    },
-    "5": {
-      "name": "Chuck_Grip",
       "accuracy": 0.3333333333333333,
       "correct": 1,
       "total": 3
     },
+    "3": {
+      "name": "Wrist_Pronation",
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 3
+    },
+    "4": {
+      "name": "Wrist_Supination",
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 3
+    },
+    "5": {
+      "name": "Chuck_Grip",
+      "accuracy": 0.0,
+      "correct": 0,
+      "total": 3
+    },
     "6": {
       "name": "Hand_Open",
-      "accuracy": 1.0,
-      "correct": 3,
+      "accuracy": 0.0,
+      "correct": 0,
       "total": 3
     }
   },
   "severity_class_performance": {
     "0": {
       "name": "Light",
-      "accuracy": 0.2857142857142857,
-      "correct": 2,
+      "accuracy": 1.0,
+      "correct": 7,
       "total": 7
     },
     "1": {
       "name": "Medium",
-      "accuracy": 0.5714285714285714,
-      "correct": 4,
+      "accuracy": 0.0,
+      "correct": 0,
       "total": 7
     },
     "2": {
       "name": "Hard",
-      "accuracy": 0.8571428571428571,
-      "correct": 6,
+      "accuracy": 0.5714285714285714,
+      "correct": 4,
       "total": 7
     }
   },
   "critical_classes": {
     "movements": [
       {
-        "class": "Wrist_Pronation",
+        "class": "Wrist_Flexion",
         "accuracy": 0.6666666666666666,
+        "samples": 3
+      },
+      {
+        "class": "Wrist_Extension",
+        "accuracy": 0.3333333333333333,
+        "samples": 3
+      },
+      {
+        "class": "Wrist_Pronation",
+        "accuracy": 0.0,
         "samples": 3
       },
       {
         "class": "Wrist_Supination",
-        "accuracy": 0.6666666666666666,
+        "accuracy": 0.0,
         "samples": 3
       },
       {
         "class": "Chuck_Grip",
-        "accuracy": 0.3333333333333333,
+        "accuracy": 0.0,
+        "samples": 3
+      },
+      {
+        "class": "Hand_Open",
+        "accuracy": 0.0,
         "samples": 3
       }
     ],
     "severities": [
       {
-        "class": "Light",
-        "accuracy": 0.2857142857142857,
+        "class": "Medium",
+        "accuracy": 0.0,
         "samples": 7
       },
       {
-        "class": "Medium",
+        "class": "Hard",
         "accuracy": 0.5714285714285714,
         "samples": 7
       }
@@ -107,71 +122,71 @@
       "movement": "No_Movement",
       "severity": "Light",
       "movement_correct": true,
-      "severity_correct": false,
-      "both_correct": false
+      "severity_correct": true,
+      "both_correct": true
     },
     {
       "movement": "Wrist_Flexion",
       "severity": "Light",
-      "movement_correct": true,
-      "severity_correct": false,
+      "movement_correct": false,
+      "severity_correct": true,
       "both_correct": false
     },
     {
       "movement": "Wrist_Extension",
       "severity": "Light",
-      "movement_correct": true,
+      "movement_correct": false,
       "severity_correct": true,
-      "both_correct": true
+      "both_correct": false
     },
     {
       "movement": "Wrist_Pronation",
       "severity": "Light",
-      "movement_correct": true,
-      "severity_correct": false,
+      "movement_correct": false,
+      "severity_correct": true,
       "both_correct": false
     },
     {
       "movement": "Wrist_Supination",
       "severity": "Light",
-      "movement_correct": true,
-      "severity_correct": false,
+      "movement_correct": false,
+      "severity_correct": true,
       "both_correct": false
     },
     {
       "movement": "Chuck_Grip",
       "severity": "Light",
-      "movement_correct": true,
-      "severity_correct": false,
+      "movement_correct": false,
+      "severity_correct": true,
       "both_correct": false
     },
     {
       "movement": "Hand_Open",
       "severity": "Light",
-      "movement_correct": true,
+      "movement_correct": false,
       "severity_correct": true,
-      "both_correct": true
+      "both_correct": false
     },
     {
       "movement": "No_Movement",
       "severity": "Medium",
       "movement_correct": true,
-      "severity_correct": true,
-      "both_correct": true
+      "severity_correct": false,
+      "both_correct": false
     },
     {
       "movement": "Wrist_Flexion",
       "severity": "Medium",
       "movement_correct": true,
-      "severity_correct": true,
-      "both_correct": true
+      "severity_correct": false,
+      "both_correct": false
     },
     {
       "movement": "Wrist_Extension",
       "severity": "Medium",
-      "movement_correct": true,
-      "severity_correct": true,
-      "both_correct": true
+      "movement_correct": false,
+      "severity_correct": false,
+      "both_correct": false
     },
     {
       "movement": "Wrist_Pronation",
@@ -183,9 +198,9 @@
     {
       "movement": "Wrist_Supination",
       "severity": "Medium",
-      "movement_correct": true,
-      "severity_correct": true,
-      "both_correct": true
+      "movement_correct": false,
+      "severity_correct": false,
+      "both_correct": false
     },
     {
       "movement": "Chuck_Grip",
@@ -197,7 +212,7 @@
     {
       "movement": "Hand_Open",
       "severity": "Medium",
-      "movement_correct": true,
+      "movement_correct": false,
       "severity_correct": false,
       "both_correct": false
     },
@@ -225,30 +240,30 @@
     {
       "movement": "Wrist_Pronation",
       "severity": "Hard",
-      "movement_correct": true,
+      "movement_correct": false,
       "severity_correct": true,
-      "both_correct": true
+      "both_correct": false
     },
     {
       "movement": "Wrist_Supination",
       "severity": "Hard",
       "movement_correct": false,
-      "severity_correct": true,
+      "severity_correct": false,
       "both_correct": false
     },
     {
       "movement": "Chuck_Grip",
       "severity": "Hard",
       "movement_correct": false,
-      "severity_correct": true,
+      "severity_correct": false,
       "both_correct": false
     },
     {
       "movement": "Hand_Open",
       "severity": "Hard",
-      "movement_correct": true,
+      "movement_correct": false,
       "severity_correct": true,
-      "both_correct": true
+      "both_correct": false
     }
   ]
 }
