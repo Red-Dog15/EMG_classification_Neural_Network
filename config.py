@@ -49,11 +49,18 @@ BATCH_SIZE = 64
 LEARNING_RATE = 0.001
 EARLY_STOPPING_PATIENCE = 10
 
-# Multi-task loss weighting (movement-priority optimization)
+# Multi-task loss weighting — equal weight so severity head receives full gradient
 MOVEMENT_LOSS_WEIGHT = 1.0
-SEVERITY_LOSS_WEIGHT = 0.2
+SEVERITY_LOSS_WEIGHT = 1.0
+
+# L2 regularization strength applied to all model weights via Adam weight_decay.
+# Prevents the model from memorising the small training set.
+WEIGHT_DECAY = 1e-4
 
 # Early stopping monitor options: "loss", "movement_acc", "severity_acc"
+# movement_acc: saves the epoch that peaks on test movement accuracy (recommended).
+# Do NOT use "loss" here — test loss diverges from epoch 1 so the monitor would
+# always save the epoch-1 near-random model.
 EARLY_STOPPING_MONITOR = "movement_acc"
 EARLY_STOPPING_MIN_DELTA = 0.001
 

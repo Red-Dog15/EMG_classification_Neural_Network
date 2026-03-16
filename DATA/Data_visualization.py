@@ -12,8 +12,14 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from DATA import Data_Conversion as DC
 from NN.predict import load_trained_model, predict_from_tensor
 from DATA.Data_Conversion import MOVEMENT_LABELS, SEVERITY_LABELS, create_labeled_dataset
-from DATA.dataset import EMGDataset
+from DATA.dataset import EMGDataset, create_dataloaders
 from torch.utils.data import random_split
+
+try:
+    from torch.utils.tensorboard import SummaryWriter
+    TENSORBOARD_AVAILABLE = True
+except ImportError:
+    TENSORBOARD_AVAILABLE = False
 
 # Import shared configuration to match training settings
 try:
@@ -43,6 +49,7 @@ RESULTS_DIR = os.path.join(SCRIPTS_ROOT, "DATA", "Results")
 RAW_RESULTS_DIR = os.path.join(RESULTS_DIR, "Raw_Data")
 PRED_RESULTS_DIR = os.path.join(RESULTS_DIR, "Predicted_Data")
 HEATMAP_RESULTS_DIR = os.path.join(RESULTS_DIR, "Heatmaps")
+EVAL_LOG_DIR = os.path.join(SCRIPTS_ROOT, "runs")
 
 # ============================================================================
 # HEATMAP EVALUATION CONTROLS
@@ -665,6 +672,41 @@ def generate_predicted_plots(tensors, window_samples=200):
     
     print(f"\n✅ Predicted plots saved to: {PRED_RESULTS_DIR}")
 
+# ============================================================================
+# TENSORBOARD HELPERS
+# ============================================================================
+
+def _fig_to_image_tensor(fig):
+    """Convert a matplotlib Figure to a (C, H, W) uint8 tensor for TensorBoard."""
+    fig.canvas.draw()
+    buf = np.asarray(fig.canvas.buffer_rgba())  # (H, W, 4) RGBA
+    return torch.from_numpy(buf[:, :, :3]).permute(2, 0, 1)  # → (3, H, W) RGB
+
+
+def _make_confusion_matrix_figure(true_labels, pred_labels, class_names, title="Confusion Matrix"):
+    """Build a confusion matrix matplotlib Figure suitable for TensorBoard add_figure."""
+    n = len(class_names)
+    cm = np.zeros((n, n), dtype=int)
+    for t, p in zip(true_labels, pred_labels):
+        if 0 <= t < n and 0 <= p < n:
+            cm[t][p] += 1
+
+    fig, ax = plt.subplots(figsize=(max(4, n * 1.8), max(4, n * 1.8)))
+    im = ax.imshow(cm, interpolation='nearest', cmap='Blues')
+    fig.colorbar(im, ax=ax)
+    ax.set(xticks=np.arange(n), yticks=np.arange(n),
+           xticklabels=class_names, yticklabels=class_names,
+           title=title, ylabel='True label', xlabel='Predicted label')
+    plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    thresh = cm.max() / 2.0
+    for i in range(n):
+        for j in range(n):
+            ax.text(j, i, str(cm[i, j]), ha='center', va='center',
+                    color='white' if cm[i, j] > thresh else 'black', fontsize=9)
+    fig.tight_layout()
+    return fig
+
+
 def generate_analytics_report():
     """Generate analytics report from collected prediction data."""
     print("\n" + "="*80)
@@ -828,6 +870,61 @@ def generate_analytics_report():
     
     print("="*80)
 
+    # ---- TensorBoard logging ----
+    if TENSORBOARD_AVAILABLE and analytics_data.get("predictions"):
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_dir = os.path.join(EVAL_LOG_DIR, f"eval_analytics_{timestamp}")
+        writer = SummaryWriter(log_dir)
+
+        # Overall scalars
+        writer.add_scalar('Overall/Movement_Accuracy', avg_movement_accuracy, 0)
+        writer.add_scalar('Overall/Severity_Accuracy', avg_severity_accuracy, 0)
+        writer.add_scalar('Overall/Combined_Accuracy', avg_overall_accuracy, 0)
+
+        # Per-class movement accuracy (class index as step)
+        for idx in sorted(movement_class_accuracy.keys()):
+            data = movement_class_accuracy[idx]
+            writer.add_scalar('Per_Class_Movement_Accuracy',
+                              data['accuracy'], global_step=idx)
+
+        # Per-class severity accuracy
+        for idx in sorted(severity_class_accuracy.keys()):
+            data = severity_class_accuracy[idx]
+            writer.add_scalar('Per_Class_Severity_Accuracy',
+                              data['accuracy'], global_step=idx)
+
+        # Prediction confidence histograms
+        m_confs = np.array([p['movement_confidence'] for p in analytics_data['predictions']])
+        s_confs = np.array([p['severity_confidence']  for p in analytics_data['predictions']])
+        writer.add_histogram('Confidence/Movement', m_confs, 0)
+        writer.add_histogram('Confidence/Severity',  s_confs, 0)
+
+        # Movement confusion matrix
+        true_mov = [p['true_movement_idx'] for p in analytics_data['predictions']]
+        pred_mov = [p['pred_movement_idx'] for p in analytics_data['predictions']]
+        cm_fig_mov = _make_confusion_matrix_figure(
+            true_mov, pred_mov,
+            class_names=[MOVEMENT_LABELS[i] for i in range(len(MOVEMENT_LABELS))],
+            title='Movement Confusion Matrix'
+        )
+        writer.add_figure('Confusion_Matrix/Movement', cm_fig_mov, 0)
+        plt.close(cm_fig_mov)
+
+        # Severity confusion matrix
+        true_sev = [p['true_severity_idx'] for p in analytics_data['predictions']]
+        pred_sev = [p['pred_severity_idx']  for p in analytics_data['predictions']]
+        cm_fig_sev = _make_confusion_matrix_figure(
+            true_sev, pred_sev,
+            class_names=[SEVERITY_LABELS[i] for i in range(len(SEVERITY_LABELS))],
+            title='Severity Confusion Matrix'
+        )
+        writer.add_figure('Confusion_Matrix/Severity', cm_fig_sev, 0)
+        plt.close(cm_fig_sev)
+
+        writer.close()
+        print(f"\n📊 TensorBoard logs: {log_dir}")
+        print(f"   Run: tensorboard --logdir \"{os.path.abspath(EVAL_LOG_DIR)}\"")
+
 def generate_model_heatmap(
     train_split=TRAIN_SPLIT,
     split_seed=SPLIT_SEED,
@@ -848,24 +945,27 @@ def generate_model_heatmap(
     
     # Collect accuracy data for each model
     model_accuracy_data = {}
+    # Also collect confusion matrix data per model for TensorBoard
+    model_confusion_data = {}
 
     # ================================================================
-    # Build one deterministic held-out test set and reuse it for all models.
-    # This guarantees a fair comparison because each model sees the exact same
-    # test windows in the exact same order.
+    # Build one deterministic held-out test set using the same recording-level
+    # split as training (via create_dataloaders). This matches the exact split
+    # used during training so evaluation metrics are consistent.
     # ================================================================
     print("\nPreparing held-out test set...")
     labeled_data = create_labeled_dataset()
-    full_dataset = EMGDataset(labeled_data, window_size=eval_window_size, stride=eval_stride)
 
-    train_size = int(train_split * len(full_dataset))
-    test_size = len(full_dataset) - train_size
-
-    _, test_dataset = random_split(
-        full_dataset,
-        [train_size, test_size],
-        generator=torch.Generator().manual_seed(split_seed)
+    _, test_loader = create_dataloaders(
+        labeled_data,
+        batch_size=256,
+        train_split=train_split,
+        window_size=eval_window_size,
+        stride=eval_stride,
+        num_workers=0,
+        split_seed=split_seed
     )
+    test_dataset = test_loader.dataset
 
     selected_indices = select_eval_indices(
         total_size=len(test_dataset),
@@ -924,6 +1024,8 @@ def generate_model_heatmap(
             
             # Initialize analytics for this model
             model_analytics = initialize_analytics_data(model_path)
+            # Confusion matrix accumulators for TensorBoard
+            true_mov_labels, pred_mov_labels = [], []
             
             # Evaluate model on the same selected held-out windows.
             for idx in selected_indices:
@@ -932,12 +1034,15 @@ def generate_model_heatmap(
                 # Get prediction
                 prediction = predict_from_tensor(model, window, window_size=eval_window_size)
                 
-                # Update stats only for movement accuracy (for heatmap)
+                # Update stats for movement accuracy (for heatmap)
                 movement_correct = prediction['movement_pred'] == movement_label.item()
                 
                 model_analytics["movement_stats"][movement_label.item()]["total"] += 1
                 if movement_correct:
                     model_analytics["movement_stats"][movement_label.item()]["correct"] += 1
+
+                true_mov_labels.append(movement_label.item())
+                pred_mov_labels.append(prediction['movement_pred'])
             
             # Calculate accuracies for each movement class
             movement_accuracies = []
@@ -953,6 +1058,7 @@ def generate_model_heatmap(
                 print(f"        {MOVEMENT_LABELS[idx]:20s}: {stats['correct']:3d}/{stats['total']:3d} = {accuracy:6.2f}%")
             
             model_accuracy_data[model_name] = movement_accuracies
+            model_confusion_data[model_name] = (true_mov_labels, pred_mov_labels)
             
             # Calculate total samples tested
             total_samples = sum(stats["total"] for stats in model_analytics["movement_stats"].values())
@@ -1045,6 +1151,65 @@ def generate_model_heatmap(
     print(f"✅ Heatmap data saved to: {json_file}")
     
     plt.close()
+
+    # ---- TensorBoard logging ----
+    if TENSORBOARD_AVAILABLE:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_dir = os.path.join(EVAL_LOG_DIR, f"eval_heatmap_{timestamp}")
+        writer = SummaryWriter(log_dir)
+
+        movement_class_names = [MOVEMENT_LABELS[i] for i in range(7)]
+
+        for model_idx, (mname, accs) in enumerate(model_accuracy_data.items()):
+            avg_acc = float(np.mean(accs))
+            # Overall average per model (all models on same chart for easy comparison)
+            writer.add_scalars('Heatmap/Average_Movement_Accuracy',
+                               {mname: avg_acc}, 0)
+            # Per-class accuracy for this model (class index as step)
+            for class_idx, acc in enumerate(accs):
+                writer.add_scalar(f'Per_Class_Accuracy/{mname}',
+                                  acc / 100.0, global_step=class_idx)
+
+        # Per-class accuracy comparison: one tag per class, one series per model
+        for class_idx, class_name in enumerate(movement_class_names):
+            class_accs = {mname: accs[class_idx] / 100.0
+                          for mname, accs in model_accuracy_data.items()}
+            writer.add_scalars(f'Class_Comparison/{class_name}', class_accs, 0)
+
+        # Log heatmap image
+        reload_fig, reload_ax = plt.subplots(figsize=(12, 6))
+        reload_im = reload_ax.imshow(accuracies, cmap='RdYlGn', aspect='auto',
+                                     vmin=50, vmax=100)
+        reload_fig.colorbar(reload_im, ax=reload_ax, label='Accuracy (%)')
+        reload_ax.set_xticks(np.arange(7))
+        reload_ax.set_yticks(np.arange(len(model_names)))
+        reload_ax.set_xticklabels(movement_class_names, rotation=45, ha='right')
+        reload_ax.set_yticklabels(model_names)
+        for i in range(len(model_names)):
+            for j in range(7):
+                v = accuracies[i, j]
+                reload_ax.text(j, i, f'{v:.1f}', ha='center', va='center',
+                               color='white' if v < 75 else 'black',
+                               fontweight='bold', fontsize=9)
+        reload_ax.set_title('Model Performance Heatmap — Movement Accuracy (%)',
+                            fontweight='bold')
+        reload_fig.tight_layout()
+        writer.add_figure('Heatmap/Model_Comparison', reload_fig, 0)
+        plt.close(reload_fig)
+
+        # Confusion matrices per model
+        for mname, (true_labels, pred_labels) in model_confusion_data.items():
+            cm_fig = _make_confusion_matrix_figure(
+                true_labels, pred_labels,
+                class_names=movement_class_names,
+                title=f'Movement Confusion Matrix — {mname}'
+            )
+            writer.add_figure(f'Confusion_Matrix/{mname}', cm_fig, 0)
+            plt.close(cm_fig)
+
+        writer.close()
+        print(f"\n📊 TensorBoard logs: {log_dir}")
+        print(f"   Run: tensorboard --logdir \"{os.path.abspath(EVAL_LOG_DIR)}\"")
 
     print("="*80)
 

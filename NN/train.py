@@ -35,7 +35,8 @@ try:
         WINDOW_SIZE, STRIDE, TRAIN_SPLIT, SPLIT_SEED,
         NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, EARLY_STOPPING_PATIENCE,
         MOVEMENT_LOSS_WEIGHT, SEVERITY_LOSS_WEIGHT,
-        EARLY_STOPPING_MONITOR, EARLY_STOPPING_MIN_DELTA
+        EARLY_STOPPING_MONITOR, EARLY_STOPPING_MIN_DELTA,
+        WEIGHT_DECAY
     )
     print(f"✓ Using shared config: window_size={WINDOW_SIZE}, stride={STRIDE}")
 except ImportError:
@@ -52,6 +53,7 @@ except ImportError:
     SEVERITY_LOSS_WEIGHT = 1.0
     EARLY_STOPPING_MONITOR = 'loss'
     EARLY_STOPPING_MIN_DELTA = 0.0
+    WEIGHT_DECAY = 1e-4
     print("⚠ config.py not found, using default settings")
 
 SCRIPTS_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -200,6 +202,7 @@ def train_model(
     early_stopping_min_delta=EARLY_STOPPING_MIN_DELTA,
     movement_loss_weight=MOVEMENT_LOSS_WEIGHT,
     severity_loss_weight=SEVERITY_LOSS_WEIGHT,
+    weight_decay=WEIGHT_DECAY,
     window_size=WINDOW_SIZE,  # From shared config
     stride=STRIDE,            # From shared config
     train_split=TRAIN_SPLIT,  # From shared config
@@ -272,7 +275,7 @@ def train_model(
         movement_weight=movement_loss_weight,
         severity_weight=severity_loss_weight
     )
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode='min', factor=0.5, patience=5
     )

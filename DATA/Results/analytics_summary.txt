@@ -2,49 +2,42 @@
 EMG CLASSIFICATION ANALYTICS REPORT
 ================================================================================
 
-Generated: 2026-03-16T15:48:44.729826
-Model: NN/models/best_model_full.pth
+Generated: 2026-03-16T22:26:01.504526
+Model: C:\Users\lingu\Documents\projects\bionic_arm\program\scripts\NN\models\best_model_standard_cnn.pth
 Total Samples: 21
 
 ================================================================================
 OVERALL ACCURACY METRICS
 ================================================================================
-Average Movement Accuracy:  28.57%
-Average Severity Accuracy:  52.38%
-Combined Overall Accuracy:  14.29%
+Average Movement Accuracy:  100.00%
+Average Severity Accuracy:  80.95%
+Combined Overall Accuracy:  80.95%
 
 ================================================================================
 MOVEMENT CLASS PERFORMANCE
 ================================================================================
 No_Movement               100.00%  (3/3)  ✓ Good
-Wrist_Flexion             66.67%  (2/3)  ⚠ CRITICAL
-Wrist_Extension           33.33%  (1/3)  ⚠ CRITICAL
-Wrist_Pronation            0.00%  (0/3)  ⚠ CRITICAL
-Wrist_Supination           0.00%  (0/3)  ⚠ CRITICAL
-Chuck_Grip                 0.00%  (0/3)  ⚠ CRITICAL
-Hand_Open                  0.00%  (0/3)  ⚠ CRITICAL
+Wrist_Flexion             100.00%  (3/3)  ✓ Good
+Wrist_Extension           100.00%  (3/3)  ✓ Good
+Wrist_Pronation           100.00%  (3/3)  ✓ Good
+Wrist_Supination          100.00%  (3/3)  ✓ Good
+Chuck_Grip                100.00%  (3/3)  ✓ Good
+Hand_Open                 100.00%  (3/3)  ✓ Good
 
 ================================================================================
 SEVERITY CLASS PERFORMANCE
 ================================================================================
-Light                     100.00%  (7/7)  ✓ Good
-Medium                     0.00%  (0/7)  ⚠ CRITICAL
-Hard                      57.14%  (4/7)  ⚠ CRITICAL
+Light                     57.14%  (4/7)  ⚠ CRITICAL
+Medium                    85.71%  (6/7)  ✓ Good
+Hard                      100.00%  (7/7)  ✓ Good
 
 ================================================================================
 CRITICAL CLASSES (Accuracy < 70%)
 ================================================================================
 
-Movements Needing Improvement:
-  • Wrist_Flexion             66.67%  (3 samples)
-  • Wrist_Extension           33.33%  (3 samples)
-  • Wrist_Pronation            0.00%  (3 samples)
-  • Wrist_Supination           0.00%  (3 samples)
-  • Chuck_Grip                 0.00%  (3 samples)
-  • Hand_Open                  0.00%  (3 samples)
+✓ All movement classes performing well (>70% accuracy)
 
 Severities Needing Improvement:
-  • Medium                     0.00%  (7 samples)
-  • Hard                      57.14%  (7 samples)
+  • Light                     57.14%  (7 samples)
 
 ================================================================================
