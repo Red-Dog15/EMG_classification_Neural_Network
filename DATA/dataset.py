@@ -55,7 +55,8 @@ class EMGDataset(Dataset):
 
 
 def create_dataloaders(labeled_data, batch_size=32, train_split=0.8,
-                       window_size=100, stride=50, num_workers=0, split_seed=42):
+                       window_size=100, stride=50, num_workers=0, split_seed=42,
+                       eval_stride=None):
     """
     Create train and test DataLoaders.
     
@@ -64,13 +65,18 @@ def create_dataloaders(labeled_data, batch_size=32, train_split=0.8,
         batch_size: Batch size for training
         train_split: Fraction of data for training (rest for testing)
         window_size: Timesteps per sample
-        stride: Sliding window stride
+        stride: Sliding window stride (used for training windows)
         num_workers: Number of worker processes for data loading
         split_seed: Seed used for reproducible recording-level split
+        eval_stride: Stride used for test windows only. If None, uses `stride`.
+                     Set to a smaller value (e.g. 1) to generate denser test
+                     windows for richer evaluation without affecting training.
         
     Returns:
         train_loader, test_loader: PyTorch DataLoader objects
     """
+    if eval_stride is None:
+        eval_stride = stride
     # Temporal split within each recording.
     #
     # The previous recording-level split (one whole recording held out per movement
@@ -104,7 +110,7 @@ def create_dataloaders(labeled_data, batch_size=32, train_split=0.8,
     _sev_summary = ', '.join(f"{_sev_names[k]}:{v}" for k, v in sorted(_test_sev.items()))
 
     train_dataset = EMGDataset(train_segments, window_size=window_size, stride=stride)
-    test_dataset  = EMGDataset(test_segments,  window_size=window_size, stride=stride)
+    test_dataset  = EMGDataset(test_segments,  window_size=window_size, stride=eval_stride)
 
     # Create DataLoaders
     train_loader = DataLoader(

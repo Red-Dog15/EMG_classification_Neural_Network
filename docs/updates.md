@@ -295,55 +295,60 @@ The transition step count is: `transition_steps = round(steps_per_window × NN_T
 - [ ] Validate joint tuning JSON files for all 6 movement classes
 - [ ] Extend `viewer_utils.py` with recording/export capability
 - [ ] Evaluate multi-subject generalisation with new EMG recordings
-Saved: DATA/Results/Light_No_Movement.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Light_Wrist_Flexion.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Light_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Light_Wrist_Pronation.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Light_Wrist_Supination.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Light_Chuck_Grip.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Light_Hand_Open.png - ✓ CORRECT
-Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Hard_No_Movement.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Hard_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Hard_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Hard_Wrist_Pronation.png - ✓ CORRECT
-Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Hard_No_Movement.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Hard_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Hard_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
-Saved: DATA/Results/Medium_No_Movement.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Wrist_Pronation.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Wrist_Supination.png - ✓ CORRECT
-Saved: DATA/Results/Medium_Chuck_Grip.png - ✗ INCORRECT
-Saved: DATA/Results/Medium_Hand_Open.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Hard_No_Movement.png - ⚠ Movement OK, Severity Wrong
-Saved: DATA/Results/Hard_Wrist_Flexion.png - ✓ CORRECT
-Saved: DATA/Results/Hard_Wrist_Extension.png - ✓ CORRECT
-Saved: DATA/Results/Hard_Wrist_Pronation.png - ✓ CORRECT
-Saved: DATA/Results/Hard_Wrist_Supination.png - ✗ INCORRECT
-Saved: DATA/Results/Hard_Chuck_Grip.png - ✗ INCORRECT
-Saved: DATA/Results/Hard_Hand_Open.png - ✓ CORRECT
+
+---
+
+## Update 5.0 - Temporal Split Protocol & Benchmark Framework (March 17, 2026)
+
+### Why this update was needed
+- The previous split strategy was producing inconsistent severity behaviour and weak generalisation across held-out combinations.
+- Benchmark outputs were hard to compare across architectures because efficiency and class-level diagnostics were not reported in one place.
+
+### Dataset protocol changes
+- Replaced recording-level rotation split with a **temporal split per recording** in `DATA/dataset.py`.
+- New split logic:
+  - `train_end = int(num_timesteps * train_split)`
+  - `test_start = train_end + (window_size - 1)`
+  - First segment is used for training, second segment for testing.
+- Added an explicit **window-size gap** between train and test segments to prevent overlap/leakage.
+- Confirmed balanced test composition after windowing (`Light:7, Medium:7, Hard:7` recording segments).
+
+### Training objective and regularisation updates
+- Kept movement/severity multitask loss at equal weight (`1.0 / 1.0`) to avoid under-training severity.
+- Restored early-stopping monitor to `movement_acc` for checkpoint aliasing stability.
+- Added `WEIGHT_DECAY = 1e-4` and wired it into Adam to reduce rapid overfitting.
+
+### Evaluation methodology alignment
+- Verified that heatmap/test analysis uses the same `create_dataloaders(...)` pipeline as training.
+- Identified stale heatmap interpretation risk: old images can persist after retraining and appear inconsistent with new checkpoints.
+- Added explicit checkpoint sanity checks by inspecting saved metadata (epoch, window size, test metrics).
+
+### New benchmark framework (`DATA/benchmark.py`)
+- Added a dedicated architecture benchmark script for dissertation analysis.
+- Metrics produced per model:
+  - Inference latency (CPU, single-window, mean ± std)
+  - Throughput (windows/sec)
+  - Parameter count (total/trainable)
+  - Checkpoint file size (MB)
+  - Per-class precision/recall/F1 (movement + severity)
+  - Macro F1 (movement + severity)
+  - Confusion matrices (movement + severity PNGs)
+- Outputs written to `DATA/Results/Benchmarks/`:
+  - `benchmark_summary.txt`
+  - `benchmark_data.json`
+  - `*_movement_confusion.png`
+  - `*_severity_confusion.png`
+
+### Current benchmark snapshot
+- NN-A (CNN+GRU): 165,802 params, 1.94 MB, 15.3 ms latency, movement macro-F1 0.9838, severity macro-F1 0.8686.
+- NN-B (Standard CNN): 126,986 params, 1.48 MB, 2.47 ms latency, movement macro-F1 0.9803, severity macro-F1 0.8338.
+- NN-C (Lightweight): 17,322 params, 0.22 MB, 1.27 ms latency, movement macro-F1 0.9884, severity macro-F1 0.9896.
+
+### Practical takeaway
+- Under the temporal split protocol, the lightweight model currently provides the best accuracy/efficiency trade-off for real-time prosthetic control experiments.
+
+### Next Steps
+- [ ] Add weights-only model size and peak inference memory metrics (separate from checkpoint file size)
+- [ ] Add end-to-end pipeline latency (window preparation + model inference)
+- [ ] Add cross-seed variability benchmark (e.g., seeds 42/43/44)
+- [ ] Add calibration metrics (ECE/reliability curves) for confidence quality

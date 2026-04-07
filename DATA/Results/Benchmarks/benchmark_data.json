@@ -1,0 +1,361 @@
+{
+  "_metadata": {
+    "window_size": 100,
+    "train_stride": 10,
+    "eval_stride": 1,
+    "train_split": 0.8,
+    "split_seed": 42,
+    "test_windows": 8510,
+    "latency_warmup_reps": 50,
+    "latency_measure_reps": 1000,
+    "latency_device": "cpu"
+  },
+  "NN-A (CNN+GRU)": {
+    "checkpoint": "best_model_full.pth",
+    "training": {
+      "training_time_sec": 1011.7202232999844,
+      "training_time_min": 16.862,
+      "source_checkpoint": "final_model_full.pth"
+    },
+    "memory": {
+      "checkpoint_file_mb": 1.938,
+      "weights_memory_mb": 0.632,
+      "inference_rss_before_mb": 284.34,
+      "inference_rss_after_mb": 285.957,
+      "inference_rss_peak_mb": 285.949,
+      "inference_rss_peak_delta_mb": 1.609,
+      "memory_probe_method": "winapi-workingset"
+    },
+    "size": {
+      "total_params": 165802,
+      "trainable_params": 165802
+    },
+    "latency": {
+      "median_ms": 19.143,
+      "iqr_ms": 13.522,
+      "p95_ms": 24.968,
+      "throughput_wps": 52.2,
+      "throughput_iqr_wps": 36.9
+    },
+    "movement": {
+      "macro": {
+        "precision": 0.9741,
+        "recall": 0.9735,
+        "f1": 0.9736
+      },
+      "macro_uncertainty": {
+        "f1_std": 0.00167,
+        "f1_ci95_low": 0.9701,
+        "f1_ci95_high": 0.9767
+      },
+      "per_class": {
+        "No_Movement": {
+          "precision": 0.9712,
+          "recall": 1.0,
+          "f1": 0.9854,
+          "support": 1212
+        },
+        "Wrist_Flexion": {
+          "precision": 1.0,
+          "recall": 0.9736,
+          "f1": 0.9866,
+          "support": 1212
+        },
+        "Wrist_Extension": {
+          "precision": 1.0,
+          "recall": 0.9608,
+          "f1": 0.98,
+          "support": 1225
+        },
+        "Wrist_Pronation": {
+          "precision": 0.9622,
+          "recall": 0.9967,
+          "f1": 0.9791,
+          "support": 1225
+        },
+        "Wrist_Supination": {
+          "precision": 0.9523,
+          "recall": 0.9624,
+          "f1": 0.9574,
+          "support": 1225
+        },
+        "Chuck_Grip": {
+          "precision": 0.9923,
+          "recall": 0.97,
+          "f1": 0.981,
+          "support": 1199
+        },
+        "Hand_Open": {
+          "precision": 0.9405,
+          "recall": 0.9513,
+          "f1": 0.9459,
+          "support": 1212
+        }
+      }
+    },
+    "severity": {
+      "macro": {
+        "precision": 0.868,
+        "recall": 0.8583,
+        "f1": 0.8605
+      },
+      "macro_uncertainty": {
+        "f1_std": 0.00342,
+        "f1_ci95_low": 0.85378,
+        "f1_ci95_high": 0.86675
+      },
+      "per_class": {
+        "Light": {
+          "precision": 0.7754,
+          "recall": 0.8127,
+          "f1": 0.7936,
+          "support": 2841
+        },
+        "Medium": {
+          "precision": 0.8285,
+          "recall": 0.9071,
+          "f1": 0.866,
+          "support": 2854
+        },
+        "Hard": {
+          "precision": 1.0,
+          "recall": 0.8551,
+          "f1": 0.9219,
+          "support": 2815
+        }
+      }
+    }
+  },
+  "NN-B (Standard CNN)": {
+    "checkpoint": "best_model_standard_cnn.pth",
+    "training": {
+      "training_time_sec": 204.3990084999823,
+      "training_time_min": 3.407,
+      "source_checkpoint": "final_model_standard_cnn.pth"
+    },
+    "memory": {
+      "checkpoint_file_mb": 1.484,
+      "weights_memory_mb": 0.484,
+      "inference_rss_before_mb": 303.758,
+      "inference_rss_after_mb": 307.062,
+      "inference_rss_peak_mb": 307.062,
+      "inference_rss_peak_delta_mb": 3.305,
+      "memory_probe_method": "winapi-workingset"
+    },
+    "size": {
+      "total_params": 126986,
+      "trainable_params": 126986
+    },
+    "latency": {
+      "median_ms": 3.085,
+      "iqr_ms": 1.075,
+      "p95_ms": 4.014,
+      "throughput_wps": 324.1,
+      "throughput_iqr_wps": 112.953
+    },
+    "movement": {
+      "macro": {
+        "precision": 0.9725,
+        "recall": 0.9707,
+        "f1": 0.9708
+      },
+      "macro_uncertainty": {
+        "f1_std": 0.00173,
+        "f1_ci95_low": 0.96701,
+        "f1_ci95_high": 0.97411
+      },
+      "per_class": {
+        "No_Movement": {
+          "precision": 0.9417,
+          "recall": 1.0,
+          "f1": 0.97,
+          "support": 1212
+        },
+        "Wrist_Flexion": {
+          "precision": 1.0,
+          "recall": 0.9505,
+          "f1": 0.9746,
+          "support": 1212
+        },
+        "Wrist_Extension": {
+          "precision": 0.9959,
+          "recall": 0.9976,
+          "f1": 0.9967,
+          "support": 1225
+        },
+        "Wrist_Pronation": {
+          "precision": 0.9967,
+          "recall": 0.9984,
+          "f1": 0.9976,
+          "support": 1225
+        },
+        "Wrist_Supination": {
+          "precision": 0.9064,
+          "recall": 0.9959,
+          "f1": 0.949,
+          "support": 1225
+        },
+        "Chuck_Grip": {
+          "precision": 1.0,
+          "recall": 0.9475,
+          "f1": 0.973,
+          "support": 1199
+        },
+        "Hand_Open": {
+          "precision": 0.9665,
+          "recall": 0.9051,
+          "f1": 0.9348,
+          "support": 1212
+        }
+      }
+    },
+    "severity": {
+      "macro": {
+        "precision": 0.8468,
+        "recall": 0.831,
+        "f1": 0.8352
+      },
+      "macro_uncertainty": {
+        "f1_std": 0.00393,
+        "f1_ci95_low": 0.82788,
+        "f1_ci95_high": 0.8422
+      },
+      "per_class": {
+        "Light": {
+          "precision": 0.832,
+          "recall": 0.7966,
+          "f1": 0.8139,
+          "support": 2841
+        },
+        "Medium": {
+          "precision": 0.7102,
+          "recall": 0.8399,
+          "f1": 0.7696,
+          "support": 2854
+        },
+        "Hard": {
+          "precision": 0.9983,
+          "recall": 0.8565,
+          "f1": 0.922,
+          "support": 2815
+        }
+      }
+    }
+  },
+  "NN-C (Lightweight)": {
+    "checkpoint": "best_model_lightweight.pth",
+    "training": {
+      "training_time_sec": 50.08645020000404,
+      "training_time_min": 0.835,
+      "source_checkpoint": "final_model_lightweight.pth"
+    },
+    "memory": {
+      "checkpoint_file_mb": 0.218,
+      "weights_memory_mb": 0.066,
+      "inference_rss_before_mb": 315.348,
+      "inference_rss_after_mb": 318.219,
+      "inference_rss_peak_mb": 318.215,
+      "inference_rss_peak_delta_mb": 2.867,
+      "memory_probe_method": "winapi-workingset"
+    },
+    "size": {
+      "total_params": 17322,
+      "trainable_params": 17322
+    },
+    "latency": {
+      "median_ms": 1.048,
+      "iqr_ms": 0.605,
+      "p95_ms": 1.672,
+      "throughput_wps": 954.2,
+      "throughput_iqr_wps": 550.849
+    },
+    "movement": {
+      "macro": {
+        "precision": 0.9872,
+        "recall": 0.9865,
+        "f1": 0.9865
+      },
+      "macro_uncertainty": {
+        "f1_std": 0.00128,
+        "f1_ci95_low": 0.98421,
+        "f1_ci95_high": 0.98876
+      },
+      "per_class": {
+        "No_Movement": {
+          "precision": 0.9454,
+          "recall": 1.0,
+          "f1": 0.9719,
+          "support": 1212
+        },
+        "Wrist_Flexion": {
+          "precision": 1.0,
+          "recall": 0.948,
+          "f1": 0.9733,
+          "support": 1212
+        },
+        "Wrist_Extension": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1225
+        },
+        "Wrist_Pronation": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1225
+        },
+        "Wrist_Supination": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 1225
+        },
+        "Chuck_Grip": {
+          "precision": 1.0,
+          "recall": 0.9575,
+          "f1": 0.9783,
+          "support": 1199
+        },
+        "Hand_Open": {
+          "precision": 0.965,
+          "recall": 1.0,
+          "f1": 0.9822,
+          "support": 1212
+        }
+      }
+    },
+    "severity": {
+      "macro": {
+        "precision": 0.9887,
+        "recall": 0.9886,
+        "f1": 0.9886
+      },
+      "macro_uncertainty": {
+        "f1_std": 0.00107,
+        "f1_ci95_low": 0.98628,
+        "f1_ci95_high": 0.9905
+      },
+      "per_class": {
+        "Light": {
+          "precision": 0.9828,
+          "recall": 0.9831,
+          "f1": 0.9829,
+          "support": 2841
+        },
+        "Medium": {
+          "precision": 0.9832,
+          "recall": 0.9828,
+          "f1": 0.983,
+          "support": 2854
+        },
+        "Hard": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 2815
+        }
+      }
+    }
+  }
+}

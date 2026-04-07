@@ -2,16 +2,16 @@
 EMG CLASSIFICATION ANALYTICS REPORT
 ================================================================================
 
-Generated: 2026-03-16T22:26:01.504526
-Model: C:\Users\lingu\Documents\projects\bionic_arm\program\scripts\NN\models\best_model_standard_cnn.pth
+Generated: 2026-03-26T20:08:58.660604
+Model: C:\Users\lingu\Documents\projects\bionic_arm\program\Scripts\NN\models\best_model_full.pth
 Total Samples: 21
 
 ================================================================================
 OVERALL ACCURACY METRICS
 ================================================================================
 Average Movement Accuracy:  100.00%
-Average Severity Accuracy:  80.95%
-Combined Overall Accuracy:  80.95%
+Average Severity Accuracy:  90.48%
+Combined Overall Accuracy:  90.48%
 
 ================================================================================
 MOVEMENT CLASS PERFORMANCE
@@ -27,8 +27,8 @@ Hand_Open                 100.00%  (3/3)  ✓ Good
 ================================================================================
 SEVERITY CLASS PERFORMANCE
 ================================================================================
-Light                     57.14%  (4/7)  ⚠ CRITICAL
-Medium                    85.71%  (6/7)  ✓ Good
+Light                     71.43%  (5/7)  ✓ Good
+Medium                    100.00%  (7/7)  ✓ Good
 Hard                      100.00%  (7/7)  ✓ Good
 
 ================================================================================
@@ -37,7 +37,6 @@ CRITICAL CLASSES (Accuracy < 70%)
 
 ✓ All movement classes performing well (>70% accuracy)
 
-Severities Needing Improvement:
-  • Light                     57.14%  (7 samples)
+✓ All severity classes performing well (>70% accuracy)
 
 ================================================================================
