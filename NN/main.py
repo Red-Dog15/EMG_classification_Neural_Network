@@ -6,7 +6,8 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import torch
 import torch.nn as nn
 from DATA.Data_Conversion import (
-    tensors_dict, 
+    load_all_datasets,
+    load_dataset,
     create_labeled_dataset, 
     get_num_classes,
     MOVEMENT_LABELS,
@@ -16,6 +17,8 @@ from DATA.dataset import get_dataset_statistics
 from NN.train import train_model
 from NN.predict import load_trained_model, predict_from_csv, print_prediction
 
+SCRIPTS_ROOT = os.path.dirname(os.path.dirname(__file__))
+results_file = os.path.join(SCRIPTS_ROOT, "Output", "NNO.csv")  # Output file for predictions
 
 def main():
     """
@@ -28,6 +31,7 @@ def main():
     
     # 1. Show available data
     print("\n--- Step 1: Data Overview ---")
+    tensors_dict = load_all_datasets()
     print(f"Available intensities: {list(tensors_dict.keys())}")
     print(f"Movements per intensity: {len(tensors_dict['Light'])}")
     print(f"\nMovement classes: {list(MOVEMENT_LABELS.values())}")
@@ -51,46 +55,64 @@ def main():
     print("\n--- Step 3: Training ---")
     print("To train the model, uncomment the training section below or run:")
     print("  python NN/train.py")
-    print("\nThis will:")
+    print("This will:")
     print("  - Create sliding windows from the EMG data")
     print("  - Split data into train/test sets")
-    print("  - Train a CNN+GRU model to predict movement and severity")
+    print("  - Train selected model architecture (NN-A/NN-B/NN-C)")
     print("  - Save the best model to ./models/")
     print("  - Log training metrics to TensorBoard")
     
-    # Uncomment to train:
-    # train_mode = input("\nTrain model now? (y/n): ").lower()
-    # if train_mode == 'y':
-    #     model, metrics = train_model(
-    #         model_type='full',
-    #         num_epochs=30,
-    #         batch_size=32,
-    #         learning_rate=0.001,
-    #         window_size=100,
-    #         stride=50
-    #     )
-    #     print(f"\nTraining complete!")
-    #     print(f"Movement Accuracy: {metrics['movement_acc']*100:.2f}%")
-    #     print(f"Severity Accuracy: {metrics['severity_acc']*100:.2f}%")
+    #Uncomment to train:
     
+    train_mode = input("\nTrain new model now? (y/n): ").lower()
+    if train_mode == 'y':
+        print("\nSelect architecture:")
+        print("1. NN-A (full: CNN+GRU)")
+        print("2. NN-B (standard_cnn: CNN-only)")
+        print("3. NN-C (lightweight)")
+        selected = input("Choice (1-3) or Enter for 1: ").strip()
+        model_map = {"1": "full", "2": "standard_cnn", "3": "lightweight", "": "full"}
+        selected_model_type = model_map.get(selected, "full")
+
+        model, metrics = train_model(
+            model_type=selected_model_type,
+            num_epochs=30,
+            batch_size=32,
+            learning_rate=0.001,
+            window_size=100,
+            stride=50
+        )
+        print(f"\nTraining complete!")
+        print(f"Model Type: {selected_model_type}")
+        print(f"Movement Accuracy: {metrics['movement_acc']*100:.2f}%")
+        print(f"Severity Accuracy: {metrics['severity_acc']*100:.2f}%")
+        
     # 4. Prediction demo
     print("\n--- Step 4: Prediction (Demo) ---")
-    model_path = "./models/final_model_full.pth"
+    model_path = os.path.join(SCRIPTS_ROOT, "NN", "models", "best_model_full.pth")
+
+    from NN.network import save_output_sim # import output save function
     
     if os.path.exists(model_path):
         print(f"Loading trained model from {model_path}...")
         model, checkpoint = load_trained_model(model_path)
         
         # Predict on example file
-        csv_path = "./DATA/Example_data/S1_Hard_C7_R1.csv"
+        csv_path = os.path.join(SCRIPTS_ROOT, "DATA", "Example_data", "S1_Hard_C7_R1.csv")
         if os.path.exists(csv_path):
             print(f"\nMaking prediction on: {csv_path}")
             results = predict_from_csv(model, csv_path, window_size=100)
             print_prediction(results, verbose=True)
+            save_output_sim(results_file, results)
+
+        else:
+            print("Cant find Data input Path: {csv_path}")
+            return FileExistsError
     else:
         print(f"No trained model found at {model_path}")
         print("Please train a model first!")
     
+    # print closer
     print("\n" + "="*50)
     print("Workflow complete!")
     print("="*50)

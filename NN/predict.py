@@ -15,6 +15,18 @@ from NN.network import create_model
 from DATA.Data_Conversion import MOVEMENT_LABELS, SEVERITY_LABELS
 
 
+def _infer_model_type_from_path(checkpoint_path):
+    """Infer model type from checkpoint filename as a fallback."""
+    name = os.path.basename(str(checkpoint_path)).lower()
+    if "standard_cnn" in name:
+        return "standard_cnn"
+    if "lightweight" in name:
+        return "lightweight"
+    if "full" in name:
+        return "full"
+    return "full"
+
+
 def load_trained_model(checkpoint_path, device=None):
     """
     Load a trained model from checkpoint.
@@ -33,20 +45,30 @@ def load_trained_model(checkpoint_path, device=None):
     # Load checkpoint
     checkpoint = torch.load(checkpoint_path, map_location=device)
     
-    # Create model with saved parameters
+    # Create model with saved parameters; fallback to filename inference for
+    # legacy checkpoints that may not contain model_type metadata.
+    model_type = checkpoint.get('model_type') or _infer_model_type_from_path(checkpoint_path)
     model = create_model(
-        model_type=checkpoint.get('model_type', 'full'),
+        model_type=model_type,
         num_channels=8,
         num_movements=checkpoint.get('num_movements', 7),
         num_severities=checkpoint.get('num_severities', 3)
     )
     
     # Load weights
-    model.load_state_dict(checkpoint['model_state_dict'])
+    try:
+        model.load_state_dict(checkpoint['model_state_dict'])
+    except RuntimeError as exc:
+        raise RuntimeError(
+            f"Failed to load checkpoint '{checkpoint_path}'. "
+            f"Resolved model_type='{model_type}'. "
+            "Checkpoint architecture may not match selected model file."
+        ) from exc
     model = model.to(device)
     model.eval()
     
     print(f"Loaded model from {checkpoint_path}")
+    print(f"Resolved model type: {model_type}")
     print(f"Trained for {checkpoint['epoch']} epochs")
     if 'test_metrics' in checkpoint:
         metrics = checkpoint['test_metrics']
@@ -251,11 +273,18 @@ def print_prediction(results, verbose=True):
     
     print("=" * 30)
 
-
+def save_prediction(results, file_out):
+    """
+    Pretty print prediction results.
+    
+    Args:
+        results: result from predict_* functions
+    """
+    
 # Example usage
 if __name__ == "__main__":
     # Example: Load model and make prediction
-    model_path = "./models/best_model_full.pth"
+    model_path = "./NN/models/best_model_full.pth"
     
     if os.path.exists(model_path):
         # Load model

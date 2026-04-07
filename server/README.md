@@ -81,7 +81,7 @@ server> load 7
 [LOADED] S1_Hard_C7_R1.csv
   Samples: 3007
   Channels: 8
-  Duration: ~15.04s (at 200 Hz)
+  Duration: ~3.01s (at 1000 Hz)
 
 server> start
 
@@ -103,7 +103,7 @@ server> load S1_Medium_C3_R1.csv
 [LOADED] S1_Medium_C3_R1.csv
   Samples: 2987
   Channels: 8
-  Duration: ~14.94s (at 200 Hz)
+  Duration: ~2.99s (at 1000 Hz)
 
 server> start
 
@@ -183,7 +183,7 @@ def read_from_hardware(self):
             prediction = self._predict_from_buffer()
             self._send_to_control_system(prediction)
         
-        time.sleep(1/200)  # 200 Hz sampling rate
+        time.sleep(1/1000)  # 1000 Hz sampling rate
 ```
 
 ## Performance

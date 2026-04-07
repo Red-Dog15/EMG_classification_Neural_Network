@@ -1,0 +1,43 @@
+================================================================================
+EMG CLASSIFICATION ANALYTICS REPORT
+================================================================================
+
+Generated: 2026-03-16T22:26:01.504526
+Model: C:\Users\lingu\Documents\projects\bionic_arm\program\scripts\NN\models\best_model_standard_cnn.pth
+Total Samples: 21
+
+================================================================================
+OVERALL ACCURACY METRICS
+================================================================================
+Average Movement Accuracy:  100.00%
+Average Severity Accuracy:  80.95%
+Combined Overall Accuracy:  80.95%
+
+================================================================================
+MOVEMENT CLASS PERFORMANCE
+================================================================================
+No_Movement               100.00%  (3/3)  ✓ Good
+Wrist_Flexion             100.00%  (3/3)  ✓ Good
+Wrist_Extension           100.00%  (3/3)  ✓ Good
+Wrist_Pronation           100.00%  (3/3)  ✓ Good
+Wrist_Supination          100.00%  (3/3)  ✓ Good
+Chuck_Grip                100.00%  (3/3)  ✓ Good
+Hand_Open                 100.00%  (3/3)  ✓ Good
+
+================================================================================
+SEVERITY CLASS PERFORMANCE
+================================================================================
+Light                     57.14%  (4/7)  ⚠ CRITICAL
+Medium                    85.71%  (6/7)  ✓ Good
+Hard                      100.00%  (7/7)  ✓ Good
+
+================================================================================
+CRITICAL CLASSES (Accuracy < 70%)
+================================================================================
+
+✓ All movement classes performing well (>70% accuracy)
+
+Severities Needing Improvement:
+  • Light                     57.14%  (7 samples)
+
+================================================================================

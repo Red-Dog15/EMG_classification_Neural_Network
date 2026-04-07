@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-03-16T22:58:07.671871",
+  "evaluation_type": "test_set_only",
+  "evaluation_details": {
+    "train_split_ratio": 0.8,
+    "test_split_ratio": 0.19999999999999996,
+    "random_seed": 42,
+    "window_size": 100,
+    "stride": 10,
+    "test_samples_available": 863,
+    "test_samples_evaluated": 863,
+    "max_test_samples_requested": 1000,
+    "subset_strategy": "random",
+    "note": "All models are evaluated on the exact same selected held-out windows"
+  },
+  "models": [
+    "NN-A (Current Architecture)",
+    "NN-B (Standard CNN)",
+    "NN-C (Lightweight)"
+  ],
+  "movements": [
+    "No_Movement",
+    "Wrist_Flexion",
+    "Wrist_Extension",
+    "Wrist_Pronation",
+    "Wrist_Supination",
+    "Chuck_Grip",
+    "Hand_Open"
+  ],
+  "accuracy_matrix": [
+    [
+      100.0,
+      97.5609756097561,
+      100.0,
+      100.0,
+      98.38709677419355,
+      97.54098360655738,
+      95.1219512195122
+    ],
+    [
+      100.0,
+      95.1219512195122,
+      100.0,
+      100.0,
+      99.19354838709677,
+      95.90163934426229,
+      95.9349593495935
+    ],
+    [
+      100.0,
+      95.1219512195122,
+      100.0,
+      100.0,
+      100.0,
+      96.72131147540983,
+      100.0
+    ]
+  ],
+  "average_per_model": [
+    98.37300103000275,
+    98.02172832863782,
+    98.83475181356029
+  ]
+}
