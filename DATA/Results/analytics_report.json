@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-03-16T22:26:01.504526",
-  "model": "C:\\Users\\lingu\\Documents\\projects\\bionic_arm\\program\\scripts\\NN\\models\\best_model_standard_cnn.pth",
+  "timestamp": "2026-03-26T20:08:58.660604",
+  "model": "C:\\Users\\lingu\\Documents\\projects\\bionic_arm\\program\\Scripts\\NN\\models\\best_model_full.pth",
   "total_samples": 21,
   "overall_metrics": {
     "movement_accuracy": 1.0,
-    "severity_accuracy": 0.8095238095238095,
-    "combined_accuracy": 0.8095238095238095
+    "severity_accuracy": 0.9047619047619048,
+    "combined_accuracy": 0.9047619047619048
   },
   "movement_class_performance": {
     "0": {
@@ -54,14 +54,14 @@
   "severity_class_performance": {
     "0": {
       "name": "Light",
-      "accuracy": 0.5714285714285714,
-      "correct": 4,
+      "accuracy": 0.7142857142857143,
+      "correct": 5,
       "total": 7
     },
     "1": {
       "name": "Medium",
-      "accuracy": 0.8571428571428571,
-      "correct": 6,
+      "accuracy": 1.0,
+      "correct": 7,
       "total": 7
     },
     "2": {
@@ -73,13 +73,7 @@
   },
   "critical_classes": {
     "movements": [],
-    "severities": [
-      {
-        "class": "Light",
-        "accuracy": 0.5714285714285714,
-        "samples": 7
-      }
-    ]
+    "severities": []
   },
   "detailed_predictions": [
     {
@@ -89,13 +83,13 @@
       "pred_movement": "No_Movement",
       "pred_movement_idx": 0,
       "movement_correct": true,
-      "movement_confidence": 0.9955702424049377,
+      "movement_confidence": 0.9998615980148315,
       "true_severity": "Light",
       "true_severity_idx": 0,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": false,
-      "severity_confidence": 0.6166675686836243,
+      "severity_confidence": 0.5779759883880615,
       "both_correct": false
     },
     {
@@ -105,13 +99,13 @@
       "pred_movement": "Wrist_Flexion",
       "pred_movement_idx": 1,
       "movement_correct": true,
-      "movement_confidence": 0.9995816349983215,
+      "movement_confidence": 0.9999995231628418,
       "true_severity": "Light",
       "true_severity_idx": 0,
       "pred_severity": "Light",
       "pred_severity_idx": 0,
       "severity_correct": true,
-      "severity_confidence": 0.9797517657279968,
+      "severity_confidence": 0.9967813491821289,
       "both_correct": true
     },
     {
@@ -121,13 +115,13 @@
       "pred_movement": "Wrist_Extension",
       "pred_movement_idx": 2,
       "movement_correct": true,
-      "movement_confidence": 0.9997782111167908,
+      "movement_confidence": 0.9997393488883972,
       "true_severity": "Light",
       "true_severity_idx": 0,
       "pred_severity": "Light",
       "pred_severity_idx": 0,
       "severity_correct": true,
-      "severity_confidence": 0.8442900776863098,
+      "severity_confidence": 0.9962614178657532,
       "both_correct": true
     },
     {
@@ -137,14 +131,14 @@
       "pred_movement": "Wrist_Pronation",
       "pred_movement_idx": 3,
       "movement_correct": true,
-      "movement_confidence": 0.9988359808921814,
+      "movement_confidence": 0.9975365400314331,
       "true_severity": "Light",
       "true_severity_idx": 0,
-      "pred_severity": "Medium",
-      "pred_severity_idx": 1,
-      "severity_correct": false,
-      "severity_confidence": 0.5703625082969666,
-      "both_correct": false
+      "pred_severity": "Light",
+      "pred_severity_idx": 0,
+      "severity_correct": true,
+      "severity_confidence": 0.9682811498641968,
+      "both_correct": true
     },
     {
       "file": "Light_Wrist_Supination",
@@ -153,13 +147,13 @@
       "pred_movement": "Wrist_Supination",
       "pred_movement_idx": 4,
       "movement_correct": true,
-      "movement_confidence": 0.9992115497589111,
+      "movement_confidence": 0.9980731010437012,
       "true_severity": "Light",
       "true_severity_idx": 0,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": false,
-      "severity_confidence": 0.607412576675415,
+      "severity_confidence": 0.8159193396568298,
       "both_correct": false
     },
     {
@@ -169,13 +163,13 @@
       "pred_movement": "Chuck_Grip",
       "pred_movement_idx": 5,
       "movement_correct": true,
-      "movement_confidence": 0.9962270259857178,
+      "movement_confidence": 0.9998902082443237,
       "true_severity": "Light",
       "true_severity_idx": 0,
       "pred_severity": "Light",
       "pred_severity_idx": 0,
       "severity_correct": true,
-      "severity_confidence": 0.5875195860862732,
+      "severity_confidence": 0.8732284307479858,
       "both_correct": true
     },
     {
@@ -185,13 +179,13 @@
       "pred_movement": "Hand_Open",
       "pred_movement_idx": 6,
       "movement_correct": true,
-      "movement_confidence": 0.8163282871246338,
+      "movement_confidence": 0.9999933242797852,
       "true_severity": "Light",
       "true_severity_idx": 0,
       "pred_severity": "Light",
       "pred_severity_idx": 0,
       "severity_correct": true,
-      "severity_confidence": 0.7388636469841003,
+      "severity_confidence": 0.9531626105308533,
       "both_correct": true
     },
     {
@@ -201,13 +195,13 @@
       "pred_movement": "No_Movement",
       "pred_movement_idx": 0,
       "movement_correct": true,
-      "movement_confidence": 0.9976735711097717,
+      "movement_confidence": 0.9998639822006226,
       "true_severity": "Medium",
       "true_severity_idx": 1,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": true,
-      "severity_confidence": 0.7274628281593323,
+      "severity_confidence": 0.9314743280410767,
       "both_correct": true
     },
     {
@@ -217,13 +211,13 @@
       "pred_movement": "Wrist_Flexion",
       "pred_movement_idx": 1,
       "movement_correct": true,
-      "movement_confidence": 0.9994219541549683,
+      "movement_confidence": 0.9999995231628418,
       "true_severity": "Medium",
       "true_severity_idx": 1,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": true,
-      "severity_confidence": 0.9936422109603882,
+      "severity_confidence": 0.9994682669639587,
       "both_correct": true
     },
     {
@@ -233,13 +227,13 @@
       "pred_movement": "Wrist_Extension",
       "pred_movement_idx": 2,
       "movement_correct": true,
-      "movement_confidence": 0.999966025352478,
+      "movement_confidence": 0.9993574023246765,
       "true_severity": "Medium",
       "true_severity_idx": 1,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": true,
-      "severity_confidence": 0.9071447849273682,
+      "severity_confidence": 0.9984846711158752,
       "both_correct": true
     },
     {
@@ -249,13 +243,13 @@
       "pred_movement": "Wrist_Pronation",
       "pred_movement_idx": 3,
       "movement_correct": true,
-      "movement_confidence": 0.9991320967674255,
+      "movement_confidence": 0.9990817308425903,
       "true_severity": "Medium",
       "true_severity_idx": 1,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": true,
-      "severity_confidence": 0.9950258135795593,
+      "severity_confidence": 0.9942548871040344,
       "both_correct": true
     },
     {
@@ -265,13 +259,13 @@
       "pred_movement": "Wrist_Supination",
       "pred_movement_idx": 4,
       "movement_correct": true,
-      "movement_confidence": 0.9999258518218994,
+      "movement_confidence": 0.9990905523300171,
       "true_severity": "Medium",
       "true_severity_idx": 1,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": true,
-      "severity_confidence": 0.99010169506073,
+      "severity_confidence": 0.9763216972351074,
       "both_correct": true
     },
     {
@@ -281,13 +275,13 @@
       "pred_movement": "Chuck_Grip",
       "pred_movement_idx": 5,
       "movement_correct": true,
-      "movement_confidence": 0.9979821443557739,
+      "movement_confidence": 0.9998761415481567,
       "true_severity": "Medium",
       "true_severity_idx": 1,
       "pred_severity": "Medium",
       "pred_severity_idx": 1,
       "severity_correct": true,
-      "severity_confidence": 0.6217052340507507,
+      "severity_confidence": 0.9831072092056274,
       "both_correct": true
     },
     {
@@ -297,14 +291,14 @@
       "pred_movement": "Hand_Open",
       "pred_movement_idx": 6,
       "movement_correct": true,
-      "movement_confidence": 0.6894359588623047,
+      "movement_confidence": 0.9997914433479309,
       "true_severity": "Medium",
       "true_severity_idx": 1,
-      "pred_severity": "Light",
-      "pred_severity_idx": 0,
-      "severity_correct": false,
-      "severity_confidence": 0.7395880222320557,
-      "both_correct": false
+      "pred_severity": "Medium",
+      "pred_severity_idx": 1,
+      "severity_correct": true,
+      "severity_confidence": 0.9048720002174377,
+      "both_correct": true
     },
     {
       "file": "Hard_No_Movement",
@@ -313,13 +307,13 @@
       "pred_movement": "No_Movement",
       "pred_movement_idx": 0,
       "movement_correct": true,
-      "movement_confidence": 0.9990414977073669,
+      "movement_confidence": 0.9999911785125732,
       "true_severity": "Hard",
       "true_severity_idx": 2,
       "pred_severity": "Hard",
       "pred_severity_idx": 2,
       "severity_correct": true,
-      "severity_confidence": 0.7030799388885498,
+      "severity_confidence": 0.9950866103172302,
       "both_correct": true
     },
     {
@@ -329,13 +323,13 @@
       "pred_movement": "Wrist_Flexion",
       "pred_movement_idx": 1,
       "movement_correct": true,
-      "movement_confidence": 0.998100221157074,
+      "movement_confidence": 0.9999220371246338,
       "true_severity": "Hard",
       "true_severity_idx": 2,
       "pred_severity": "Hard",
       "pred_severity_idx": 2,
       "severity_correct": true,
-      "severity_confidence": 0.9999812841415405,
+      "severity_confidence": 0.9996651411056519,
       "both_correct": true
     },
     {
@@ -345,13 +339,13 @@
       "pred_movement": "Wrist_Extension",
       "pred_movement_idx": 2,
       "movement_correct": true,
-      "movement_confidence": 0.9999570846557617,
+      "movement_confidence": 0.9999619722366333,
       "true_severity": "Hard",
       "true_severity_idx": 2,
       "pred_severity": "Hard",
       "pred_severity_idx": 2,
       "severity_correct": true,
-      "severity_confidence": 1.0,
+      "severity_confidence": 0.9999772310256958,
       "both_correct": true
     },
     {
@@ -361,13 +355,13 @@
       "pred_movement": "Wrist_Pronation",
       "pred_movement_idx": 3,
       "movement_correct": true,
-      "movement_confidence": 0.9968124032020569,
+      "movement_confidence": 0.9997121691703796,
       "true_severity": "Hard",
       "true_severity_idx": 2,
       "pred_severity": "Hard",
       "pred_severity_idx": 2,
       "severity_correct": true,
-      "severity_confidence": 0.9999929666519165,
+      "severity_confidence": 0.9998119473457336,
       "both_correct": true
     },
     {
@@ -377,13 +371,13 @@
       "pred_movement": "Wrist_Supination",
       "pred_movement_idx": 4,
       "movement_correct": true,
-      "movement_confidence": 0.9995291233062744,
+      "movement_confidence": 0.9986566305160522,
       "true_severity": "Hard",
       "true_severity_idx": 2,
       "pred_severity": "Hard",
       "pred_severity_idx": 2,
       "severity_correct": true,
-      "severity_confidence": 0.9998564720153809,
+      "severity_confidence": 0.9999868869781494,
       "both_correct": true
     },
     {
@@ -393,13 +387,13 @@
       "pred_movement": "Chuck_Grip",
       "pred_movement_idx": 5,
       "movement_correct": true,
-      "movement_confidence": 0.9807737469673157,
+      "movement_confidence": 0.9987799525260925,
       "true_severity": "Hard",
       "true_severity_idx": 2,
       "pred_severity": "Hard",
       "pred_severity_idx": 2,
       "severity_correct": true,
-      "severity_confidence": 0.9997504353523254,
+      "severity_confidence": 0.9999924898147583,
       "both_correct": true
     },
     {
@@ -409,13 +403,13 @@
       "pred_movement": "Hand_Open",
       "pred_movement_idx": 6,
       "movement_correct": true,
-      "movement_confidence": 0.9550968408584595,
+      "movement_confidence": 0.998434841632843,
       "true_severity": "Hard",
       "true_severity_idx": 2,
       "pred_severity": "Hard",
       "pred_severity_idx": 2,
       "severity_correct": true,
-      "severity_confidence": 0.9999998807907104,
+      "severity_confidence": 0.9999995231628418,
       "both_correct": true
     }
   ]

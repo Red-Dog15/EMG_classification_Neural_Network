@@ -6,6 +6,8 @@ Allows dynamic file selection and continuous prediction streaming.
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from pathlib import Path
+import argparse
 
 import threading
 import time
@@ -18,33 +20,43 @@ from NN.predict import load_trained_model
 from DATA.Data_Conversion import MOVEMENT_LABELS, SEVERITY_LABELS
 
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent.parent
+MODELS_DIR = PROJECT_ROOT / "Scripts" / "NN" / "models"
+DEFAULT_MODEL_PATH = MODELS_DIR / "final_model_full.pth"
+DEFAULT_DATA_DIR = PROJECT_ROOT / "Scripts" / "DATA" / "Example_data"
+
+
 class EMGRealtimeServer:
     """
     Server that simulates real-time EMG prediction by streaming data from CSV files.
     Allows dynamic file switching via user commands.
     """
     
-    def __init__(self, model_path="./models/final_model_full.pth", window_size=100):
+    def __init__(self, model_path=None, window_size=100, data_dir=None):
         """
         Initialize the real-time server.
         
         Args:
-            model_path: Path to trained model
+            model_path: Path or filename of trained model checkpoint
             window_size: Number of samples for prediction window
+            data_dir: Path to CSV data directory
         """
         print("="*60)
         print("EMG Real-Time Prediction Server")
         print("="*60)
         
-        # Load model
-        print(f"\nLoading model from {model_path}...")
-        self.model, checkpoint = load_trained_model(model_path)
-        self.device = next(self.model.parameters()).device
         self.window_size = window_size
-        
-        print(f"Model loaded successfully!")
-        print(f"Movement Accuracy: {checkpoint['test_metrics']['movement_acc']*100:.2f}%")
-        print(f"Severity Accuracy: {checkpoint['test_metrics']['severity_acc']*100:.2f}%")
+        self.data_dir = Path(data_dir).resolve() if data_dir else DEFAULT_DATA_DIR
+
+        # Model state
+        self.model = None
+        self.device = None
+        self.current_model_path = None
+
+        # Load model
+        chosen_model = model_path if model_path else str(DEFAULT_MODEL_PATH)
+        self._load_model(chosen_model)
         
         # Streaming state
         self.current_file = None
@@ -63,6 +75,72 @@ class EMGRealtimeServer:
         self.latest_prediction = None
         self.prediction_lock = threading.Lock()
         self.prediction_history = deque(maxlen=50)  # Keep last 50 predictions for smoothing
+
+    def _resolve_model_path(self, model_path):
+        """Resolve checkpoint path from absolute, project-relative, or models-dir-relative inputs."""
+        candidate = Path(model_path)
+        if candidate.is_absolute() and candidate.exists():
+            return candidate
+
+        search_candidates = [
+            PROJECT_ROOT / model_path,
+            MODELS_DIR / model_path,
+            candidate,
+        ]
+
+        for path in search_candidates:
+            if path.exists():
+                return path.resolve()
+
+        available = ", ".join(self.list_available_models(print_output=False)[:8])
+        raise FileNotFoundError(
+            f"Model checkpoint not found: {model_path}. "
+            f"Looked in project root and {MODELS_DIR}. "
+            f"Available examples: {available}"
+        )
+
+    def _load_model(self, model_path):
+        """Load checkpoint and update active model state."""
+        resolved = self._resolve_model_path(model_path)
+        print(f"\nLoading model from {resolved}...")
+        self.model, checkpoint = load_trained_model(str(resolved))
+        self.device = next(self.model.parameters()).device
+        self.current_model_path = resolved
+
+        print("Model loaded successfully!")
+        if 'test_metrics' in checkpoint:
+            print(f"Movement Accuracy: {checkpoint['test_metrics']['movement_acc']*100:.2f}%")
+            print(f"Severity Accuracy: {checkpoint['test_metrics']['severity_acc']*100:.2f}%")
+
+    def switch_model(self, model_path):
+        """Switch active model checkpoint while server is running."""
+        was_streaming = self.is_streaming
+        if was_streaming:
+            self.stop_streaming()
+
+        self._load_model(model_path)
+
+        if was_streaming and self.current_file is not None:
+            self.start_streaming()
+
+    def list_available_models(self, directory=None, print_output=True):
+        """List available checkpoint files."""
+        models_dir = Path(directory).resolve() if directory else MODELS_DIR
+        if not models_dir.exists():
+            if print_output:
+                print(f"Model directory not found: {models_dir}")
+            return []
+
+        model_files = sorted([p.name for p in models_dir.glob("*.pth")])
+
+        if print_output:
+            print(f"\nAvailable models in {models_dir}:")
+            print("-" * 60)
+            for i, name in enumerate(model_files, 1):
+                print(f"{i:>2}. {name}")
+            print("-" * 60)
+
+        return model_files
         
     def load_file(self, csv_path):
         """
@@ -263,13 +341,14 @@ class EMGRealtimeServer:
         with self.prediction_lock:
             return self.latest_prediction
     
-    def list_available_files(self, directory="./DATA/Example_data"):
+    def list_available_files(self, directory=None):
         """List available CSV files for loading."""
-        if not os.path.exists(directory):
-            print(f"Directory not found: {directory}")
+        target_dir = Path(directory).resolve() if directory else self.data_dir
+        if not target_dir.exists():
+            print(f"Directory not found: {target_dir}")
             return []
-        
-        csv_files = [f for f in os.listdir(directory) if f.endswith('.csv')]
+
+        csv_files = [f.name for f in target_dir.glob("*.csv")]
         csv_files.sort()
         
         # Parse filenames to show movement and severity
@@ -304,6 +383,9 @@ class EMGRealtimeServer:
         print("="*60)
         print("  list                    - List available movements")
         print("  load <number>           - Load file by number")
+        print("  movement <number>       - Load file and start streaming")
+        print("  models                  - List available model checkpoints")
+        print("  model <name or path>    - Switch active model checkpoint")
         print("  start                   - Start prediction")
         print("  stop                    - Stop prediction")
         print("  status                  - Show current status")
@@ -332,6 +414,9 @@ class EMGRealtimeServer:
                     print("\nAvailable Commands:")
                     print("  list          - List available movements")
                     print("  load <#>      - Load file by number")
+                    print("  movement <#>  - Load file and start streaming")
+                    print("  models        - List available model checkpoints")
+                    print("  model <name>  - Switch active model checkpoint")
                     print("  start         - Start prediction")
                     print("  stop          - Stop prediction")
                     print("  status        - Show current status")
@@ -339,10 +424,25 @@ class EMGRealtimeServer:
                 
                 elif cmd == 'list':
                     available_files = self.list_available_files()
-                
-                elif cmd == 'load':
+
+                elif cmd == 'models':
+                    self.list_available_models()
+
+                elif cmd == 'model':
                     if len(parts) < 2:
-                        print("Usage: load <number>")
+                        print("Usage: model <checkpoint_name_or_path>")
+                        print("Use 'models' to see available checkpoints")
+                        continue
+
+                    model_ref = " ".join(parts[1:])
+                    try:
+                        self.switch_model(model_ref)
+                    except Exception as e:
+                        print(f"Error switching model: {e}")
+                
+                elif cmd in ['load', 'movement']:
+                    if len(parts) < 2:
+                        print(f"Usage: {cmd} <number>")
                         print("Use 'list' to see available files")
                         continue
                     
@@ -350,7 +450,7 @@ class EMGRealtimeServer:
                     if parts[1].isdigit():
                         idx = int(parts[1]) - 1
                         if 0 <= idx < len(available_files):
-                            filepath = os.path.join("./DATA/Example_data", available_files[idx])
+                            filepath = str(self.data_dir / available_files[idx])
                             
                             # Load new file
                             df = pd.read_csv(filepath)
@@ -365,6 +465,10 @@ class EMGRealtimeServer:
                                 print(f"\n[SWITCHED] Now predicting: {os.path.basename(filepath)}\n")
                             else:
                                 print(f"\n[LOADED] {os.path.basename(filepath)}")
+                                if cmd == 'load':
+                                    print("Type 'start' to begin real-time predictions.")
+                                elif cmd == 'movement':
+                                    self.start_streaming()
                         else:
                             print(f"Invalid number. Choose 1-{len(available_files)}")
                     else:
@@ -382,6 +486,7 @@ class EMGRealtimeServer:
                     print("Server Status")
                     print("="*60)
                     print(f"  Current file: {os.path.basename(self.current_file) if self.current_file else 'None'}")
+                    print(f"  Current model: {self.current_model_path.name if self.current_model_path else 'None'}")
                     print(f"  Streaming: {'Yes' if self.is_streaming else 'No'}")
                     if self.current_file and self.emg_data is not None:
                         progress = (self.current_index / len(self.emg_data)) * 100
@@ -408,9 +513,29 @@ class EMGRealtimeServer:
 
 def main():
     """Main entry point."""
+    parser = argparse.ArgumentParser(description="Run real-time EMG prediction server")
+    parser.add_argument(
+        "--model",
+        default=str(DEFAULT_MODEL_PATH),
+        help="Checkpoint path or filename (searched in Scripts/NN/models)",
+    )
+    parser.add_argument(
+        "--window-size",
+        type=int,
+        default=100,
+        help="Number of samples for prediction window",
+    )
+    parser.add_argument(
+        "--data-dir",
+        default=str(DEFAULT_DATA_DIR),
+        help="Directory containing CSV files for streaming",
+    )
+    args = parser.parse_args()
+
     server = EMGRealtimeServer(
-        model_path="./models/final_model_full.pth",
-        window_size=100
+        model_path=args.model,
+        window_size=args.window_size,
+        data_dir=args.data_dir,
     )
     
     server.run_interactive()

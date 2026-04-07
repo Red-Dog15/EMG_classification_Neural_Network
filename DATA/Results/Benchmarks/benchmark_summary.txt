@@ -1,0 +1,137 @@
+==========================================================================================
+EMG ARCHITECTURE BENCHMARK REPORT
+==========================================================================================
+
+Config: window_size=100 | train_stride=10 | eval_stride=1 | test_windows=8510
+
+PERFORMANCE METRICS
+------------------------------------------------------------------------------------------
+Caption: Movement and severity macro-F1 on the held-out temporal split.
+Model                           MovF1      SevF1   MovF1 SD   SevF1 SD   Rank
+------------------------------------------------------------------------------------------
+NN-A (CNN+GRU)                 0.9736     0.8605    0.00167    0.00342      3
+NN-B (Standard CNN)            0.9708     0.8352    0.00173    0.00393      2
+NN-C (Lightweight)            0.9865*    0.9886*    0.00128    0.00107      1
+
+EFFICIENCY METRICS
+------------------------------------------------------------------------------------------
+Caption: NN-C provides the best accuracy-efficiency trade-off under the temporal split protocol.
+Model                          Params   CkptMB    WtsMB   RSSΔMB   Train(s)      Lat(ms)   Thru(w/s)   Rank
+------------------------------------------------------------------------------------------
+NN-A (CNN+GRU)                165,802     1.94     0.63     1.61    1011.72       19.143        52.2      3
+NN-B (Standard CNN)           126,986     1.48     0.48     3.31     204.40        3.085       324.1      2
+NN-C (Lightweight)             17,322     0.22    0.07*     2.87     50.09*       1.048*      954.2*      1
+
+* CkptMB = full checkpoint file size on disk (includes optimizer state where present)
+* WtsMB = raw float32 model weights memory only (parameters x 4 bytes)
+* RSSΔMB = measured process RSS peak increase during inference pass
+* Train(s) pulled from paired final_model_* checkpoint training_time_sec
+* Latency measured on CPU, single-window inference (1000 reps after 50-rep warm-up)
+* Throughput = windows processed per second (1000 / mean_latency)
+* Asterisk (*) denotes best value in column where applicable
+
+==========================================================================================
+  NN-A (CNN+GRU)
+==========================================================================================
+  Checkpoint : best_model_full.pth
+  Parameters : 165,802 total / 165,802 trainable
+  Checkpoint file size : 1.938 MB
+  Weights memory       : 0.632 MB
+  Inference RSS profile: before=284.34 MB, after=285.957 MB, peak=285.949 MB, delta=1.609 MB
+  Memory probe method  : winapi-workingset
+  Training time        : 1011.72 s (16.86 min)
+  Training source      : final_model_full.pth
+  Latency    : 19.143 ms median, IQR 13.522 ms, P95 24.968 ms  (52.2 windows/sec)
+
+  MOVEMENT CLASSIFICATION
+  Class                     Precision     Recall         F1    Support
+  ------------------------------------------------------------------
+  No_Movement                  0.9712     1.0000     0.9854       1212
+  Wrist_Flexion                1.0000     0.9736     0.9866       1212
+  Wrist_Extension              1.0000     0.9608     0.9800       1225
+  Wrist_Pronation              0.9622     0.9967     0.9791       1225
+  Wrist_Supination             0.9523     0.9624     0.9574       1225
+  Chuck_Grip                   0.9923     0.9700     0.9810       1199
+  Hand_Open                    0.9405     0.9513     0.9459       1212
+  ------------------------------------------------------------------
+  MACRO AVG                    0.9741     0.9735     0.9736
+
+  SEVERITY CLASSIFICATION
+  Class                     Precision     Recall         F1    Support
+  ------------------------------------------------------------------
+  Light                        0.7754     0.8127     0.7936       2841
+  Medium                       0.8285     0.9071     0.8660       2854
+  Hard                         1.0000     0.8551     0.9219       2815
+  ------------------------------------------------------------------
+  MACRO AVG                    0.8680     0.8583     0.8605
+
+==========================================================================================
+  NN-B (Standard CNN)
+==========================================================================================
+  Checkpoint : best_model_standard_cnn.pth
+  Parameters : 126,986 total / 126,986 trainable
+  Checkpoint file size : 1.484 MB
+  Weights memory       : 0.484 MB
+  Inference RSS profile: before=303.758 MB, after=307.062 MB, peak=307.062 MB, delta=3.305 MB
+  Memory probe method  : winapi-workingset
+  Training time        : 204.40 s (3.41 min)
+  Training source      : final_model_standard_cnn.pth
+  Latency    : 3.085 ms median, IQR 1.075 ms, P95 4.014 ms  (324.1 windows/sec)
+
+  MOVEMENT CLASSIFICATION
+  Class                     Precision     Recall         F1    Support
+  ------------------------------------------------------------------
+  No_Movement                  0.9417     1.0000     0.9700       1212
+  Wrist_Flexion                1.0000     0.9505     0.9746       1212
+  Wrist_Extension              0.9959     0.9976     0.9967       1225
+  Wrist_Pronation              0.9967     0.9984     0.9976       1225
+  Wrist_Supination             0.9064     0.9959     0.9490       1225
+  Chuck_Grip                   1.0000     0.9475     0.9730       1199
+  Hand_Open                    0.9665     0.9051     0.9348       1212
+  ------------------------------------------------------------------
+  MACRO AVG                    0.9725     0.9707     0.9708
+
+  SEVERITY CLASSIFICATION
+  Class                     Precision     Recall         F1    Support
+  ------------------------------------------------------------------
+  Light                        0.8320     0.7966     0.8139       2841
+  Medium                       0.7102     0.8399     0.7696       2854
+  Hard                         0.9983     0.8565     0.9220       2815
+  ------------------------------------------------------------------
+  MACRO AVG                    0.8468     0.8310     0.8352
+
+==========================================================================================
+  NN-C (Lightweight)
+==========================================================================================
+  Checkpoint : best_model_lightweight.pth
+  Parameters : 17,322 total / 17,322 trainable
+  Checkpoint file size : 0.218 MB
+  Weights memory       : 0.066 MB
+  Inference RSS profile: before=315.348 MB, after=318.219 MB, peak=318.215 MB, delta=2.867 MB
+  Memory probe method  : winapi-workingset
+  Training time        : 50.09 s (0.83 min)
+  Training source      : final_model_lightweight.pth
+  Latency    : 1.048 ms median, IQR 0.605 ms, P95 1.672 ms  (954.2 windows/sec)
+
+  MOVEMENT CLASSIFICATION
+  Class                     Precision     Recall         F1    Support
+  ------------------------------------------------------------------
+  No_Movement                  0.9454     1.0000     0.9719       1212
+  Wrist_Flexion                1.0000     0.9480     0.9733       1212
+  Wrist_Extension              1.0000     1.0000     1.0000       1225
+  Wrist_Pronation              1.0000     1.0000     1.0000       1225
+  Wrist_Supination             1.0000     1.0000     1.0000       1225
+  Chuck_Grip                   1.0000     0.9575     0.9783       1199
+  Hand_Open                    0.9650     1.0000     0.9822       1212
+  ------------------------------------------------------------------
+  MACRO AVG                    0.9872     0.9865     0.9865
+
+  SEVERITY CLASSIFICATION
+  Class                     Precision     Recall         F1    Support
+  ------------------------------------------------------------------
+  Light                        0.9828     0.9831     0.9829       2841
+  Medium                       0.9832     0.9828     0.9830       2854
+  Hard                         1.0000     1.0000     1.0000       2815
+  ------------------------------------------------------------------
+  MACRO AVG                    0.9887     0.9886     0.9886
+

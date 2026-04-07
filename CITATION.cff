@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this repository, please cite it using the metadata below."
+title: "EMG-NN Controlled Simulation, Scripts Directory"
+type: software
+authors:
+  - family-names: Weng
+version: "1.0.0"
+date-released: 2026-04-07
+preferred-citation:
+  type: software
+  authors:
+    - family-names: Weng
+  title: "Weng (2026)"
+  year: 2026
